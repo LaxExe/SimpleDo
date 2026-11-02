@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Task, Habit, InboxGroup, Page } from '../types';
-import { storage, getTodayStr } from '../services/storage';
+import { Task, Habit, InboxGroup, DayPlan, Page } from '../types';
+import { storage, getTodayStr, sortTasks } from '../services/storage';
 import { CalendarView } from '../components/CalendarView';
 import { TaskEditModal } from '../components/TaskEditModal';
 import { 
@@ -9,19 +9,21 @@ import {
   Plus, 
   Flame, 
   GripVertical, 
-  ArrowRight, 
   ChevronLeft, 
   ChevronRight,
-  Clock,
   Sparkles,
   X,
-  Edit2
+  Edit2,
+  CheckSquare,
+  Activity,
+  Layers
 } from 'lucide-react';
 
 interface TodayPageProps {
   tasks: Task[];
   habits: Habit[];
   inboxes: InboxGroup[];
+  dayPlans: Record<string, DayPlan>;
   onNavigate: (page: Page) => void;
 }
 
@@ -29,7 +31,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
   tasks,
   habits,
   inboxes,
-  onNavigate,
+  dayPlans,
 }) => {
   const [selectedDate, setSelectedDate] = useState<string>(getTodayStr());
   const [taskInput, setTaskInput] = useState('');
@@ -37,22 +39,23 @@ export const TodayPage: React.FC<TodayPageProps> = ({
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const todayStr = getTodayStr();
-  const dayPlan = storage.getDayPlan(selectedDate);
+  const dayPlan = dayPlans[selectedDate] || storage.getDayPlan(selectedDate);
 
-  // Compute tasks for selected date
-  const plannedTasks = tasks.filter(
+  // Compute tasks for selected date & sort so active tasks appear first
+  const rawPlannedTasks = tasks.filter(
     (t) =>
       dayPlan.plannedTaskIds.includes(t.id) ||
       t.scheduledDate === selectedDate ||
       t.dueDate === selectedDate
   );
+  const plannedTasks = sortTasks(rawPlannedTasks);
 
-  // Compute habits for selected date (only habits dragged into this day!)
+  // Compute habits for selected date (only habits dragged into this day)
   const plannedHabits = habits.filter((h) => dayPlan.plannedHabitIds.includes(h.id));
 
-  // Available tasks not yet planned on selected date
-  const availableTasks = tasks.filter(
-    (t) => !t.completed && !plannedTasks.some((pt) => pt.id === t.id)
+  // Available tasks not yet planned on selected date (sorted active first)
+  const availableTasks = sortTasks(
+    tasks.filter((t) => !t.completed && !plannedTasks.some((pt) => pt.id === t.id))
   );
 
   // Available habits not yet in this day's plan
@@ -138,17 +141,27 @@ export const TodayPage: React.FC<TodayPageProps> = ({
   const habitsDoneOnDate = plannedHabits.filter((h) => h.completedDates.includes(selectedDate)).length;
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Date Navigation & Status Bar */}
+    <div className="space-y-10 animate-fadeIn">
+      {/* 1. Date Header & Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#ebebeb]">
         <div className="flex items-center gap-3">
-          <button
-            onClick={handlePrevDay}
-            className="p-1.5 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-full border border-[#ebebeb] transition-colors"
-            title="Previous Day"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
+          <div className="flex items-center border border-[#ebebeb] rounded-md bg-white shadow-2xs overflow-hidden">
+            <button
+              onClick={handlePrevDay}
+              className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-[#fafafa] transition-colors"
+              title="Previous Day"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="w-[1px] h-4 bg-[#ebebeb]" />
+            <button
+              onClick={handleNextDay}
+              className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-[#fafafa] transition-colors"
+              title="Next Day"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
 
           <div>
             <div className="flex items-center gap-2">
@@ -162,28 +175,17 @@ export const TodayPage: React.FC<TodayPageProps> = ({
               ) : (
                 <button
                   onClick={() => setSelectedDate(todayStr)}
-                  className="text-[10px] font-mono text-neutral-500 hover:text-neutral-900 underline"
+                  className="text-[11px] font-mono text-neutral-500 hover:text-neutral-900 underline"
                 >
                   Return to Today
                 </button>
               )}
             </div>
-            <p className="text-xs text-neutral-500 mt-0.5">
-              Customize and organize tasks and habits scheduled for this day.
-            </p>
           </div>
-
-          <button
-            onClick={handleNextDay}
-            className="p-1.5 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-full border border-[#ebebeb] transition-colors"
-            title="Next Day"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Quick Day Stats */}
-        <div className="flex items-center gap-3 text-xs font-mono text-neutral-600 bg-white px-3 py-1.5 rounded-full border border-[#ebebeb] shadow-subtle w-fit">
+        <div className="flex items-center gap-3 text-xs font-mono text-neutral-600 bg-white px-3.5 py-1.5 rounded-full border border-[#ebebeb] shadow-subtle w-fit">
           <span className="flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
             <span>{completedPlannedTasks}/{plannedTasks.length} tasks</span>
@@ -196,80 +198,69 @@ export const TodayPage: React.FC<TodayPageProps> = ({
         </div>
       </div>
 
-      {/* Main Grid: Day Planner Column & Calendar + Resource Pool */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column (7 cols): The Interactive Day Planner */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* Write Out Today's Tasks Input */}
-          <div className="bg-white rounded-lg border border-[#ebebeb] shadow-subtle p-4 space-y-3">
-            <div className="flex items-center justify-between text-xs font-semibold text-neutral-900">
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-accent" />
-                <span>Write what you want to get done for {isToday ? 'today' : 'this day'}</span>
-              </span>
-              <span className="text-[11px] font-normal text-neutral-400 font-mono">
-                Press Enter to add
-              </span>
-            </div>
-
-            <form onSubmit={handleAddTaskToDay} className="flex gap-2">
-              <input
-                type="text"
-                value={taskInput}
-                onChange={(e) => setTaskInput(e.target.value)}
-                placeholder="e.g. Finish project proposal, call mom, read 1 chapter..."
-                className="flex-1 px-3 py-2 text-sm bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900 transition-colors"
-              />
-              <button
-                type="submit"
-                disabled={!taskInput.trim()}
-                className="px-4 py-2 bg-neutral-900 text-white text-xs font-medium rounded-md hover:bg-neutral-800 disabled:opacity-40 transition-colors inline-flex items-center gap-1 shadow-subtle"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add</span>
-              </button>
-            </form>
+      {/* 2. Hero Section: Today's Plan (High Emphasis) */}
+      <div className="space-y-6">
+        {/* Quick Add Focus Task Input */}
+        <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle p-4 sm:p-5">
+          <div className="flex items-center justify-between text-xs font-semibold text-neutral-900 mb-2.5">
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-accent" />
+              <span>What do you want to accomplish {isToday ? 'today' : 'on this day'}?</span>
+            </span>
+            <span className="text-[11px] font-normal text-neutral-400 font-mono hidden sm:inline">
+              Press Enter
+            </span>
           </div>
 
-          {/* Droppable Day Plan Container */}
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDropOver(true);
-            }}
-            onDragLeave={() => setIsDropOver(false)}
-            onDrop={handleDropOnDay}
-            className={`bg-white rounded-lg border transition-all duration-150 p-5 shadow-subtle ${
-              isDropOver
-                ? 'border-primary ring-2 ring-primary/20 bg-blue-50/20'
-                : 'border-[#ebebeb]'
-            }`}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#ebebeb] mb-4">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-neutral-700" />
-                <h2 className="text-sm font-semibold text-neutral-900">
-                  Planned for this day
-                </h2>
-              </div>
-              <span className="text-xs text-neutral-400">
-                Drag tasks or habits here
-              </span>
-            </div>
+          <form onSubmit={handleAddTaskToDay} className="flex gap-2">
+            <input
+              type="text"
+              value={taskInput}
+              onChange={(e) => setTaskInput(e.target.value)}
+              placeholder="Type a task and add it to this day..."
+              className="flex-1 px-3.5 py-2 text-sm bg-[#fafafa] border border-[#ebebeb] rounded-lg focus:outline-none focus:border-neutral-900 transition-colors"
+            />
+            <button
+              type="submit"
+              disabled={!taskInput.trim()}
+              className="px-4 py-2 bg-neutral-900 text-white text-xs font-medium rounded-lg hover:bg-neutral-800 disabled:opacity-40 transition-colors inline-flex items-center gap-1.5 shadow-subtle"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add</span>
+            </button>
+          </form>
+        </div>
 
-            {/* Section A: Planned Tasks */}
-            <div className="space-y-2 mb-6">
-              <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider flex items-center justify-between">
-                <span>Tasks ({plannedTasks.length})</span>
+        {/* Planned Tasks & Habits Droppable Grid */}
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDropOver(true);
+          }}
+          onDragLeave={() => setIsDropOver(false)}
+          onDrop={handleDropOnDay}
+          className={`grid grid-cols-1 md:grid-cols-2 gap-6 p-1 rounded-xl transition-all ${
+            isDropOver ? 'ring-2 ring-primary/40 bg-blue-50/20' : ''
+          }`}
+        >
+          {/* Card A: Planned Tasks for the Day */}
+          <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle p-5 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-[#ebebeb] mb-3">
+                <div className="flex items-center gap-2">
+                  <CheckSquare className="w-4 h-4 text-primary" />
+                  <h2 className="text-sm font-semibold text-neutral-900">
+                    Planned Tasks
+                  </h2>
+                </div>
+                <span className="text-xs font-mono text-neutral-400">
+                  {completedPlannedTasks}/{plannedTasks.length}
+                </span>
               </div>
 
               {plannedTasks.length === 0 ? (
-                <div className="py-6 border-2 border-dashed border-[#ebebeb] rounded-lg text-center">
-                  <p className="text-xs text-neutral-500">No tasks planned yet.</p>
-                  <p className="text-[11px] text-neutral-400 mt-0.5">
-                    Write above, or drag in tasks from the pool on the right.
-                  </p>
+                <div className="py-10 text-center text-xs text-neutral-400 border border-dashed border-[#ebebeb] rounded-lg">
+                  No tasks planned for this day.
                 </div>
               ) : (
                 <ul className="divide-y divide-[#ebebeb]/70">
@@ -278,7 +269,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                       key={task.id}
                       draggable
                       onDragStart={(e) => handleDragStart(e, 'task', task.id)}
-                      className="py-3 flex items-center justify-between gap-3 group hover:bg-[#fafafa]/80 -mx-2 px-2 rounded-md transition-colors"
+                      className="py-2.5 flex items-center justify-between gap-3 group hover:bg-[#fafafa]/80 -mx-2 px-2 rounded-md transition-colors"
                     >
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <GripVertical className="w-3.5 h-3.5 text-neutral-300 group-hover:text-neutral-500 cursor-grab flex-shrink-0" />
@@ -312,17 +303,16 @@ export const TodayPage: React.FC<TodayPageProps> = ({
 
                         <button
                           onClick={() => handleMoveToTomorrow(task.id)}
-                          className="text-[10px] text-neutral-500 hover:text-neutral-900 hover:bg-[#ebebeb] px-2 py-0.5 rounded transition-colors"
-                          title="Move task to tomorrow"
+                          className="text-[10px] text-neutral-500 hover:text-neutral-900 hover:bg-[#ebebeb] px-1.5 py-0.5 rounded transition-colors"
+                          title="Move to tomorrow"
                         >
                           → Tomorrow
                         </button>
 
-                        {/* Edit task button */}
                         <button
                           onClick={() => setEditingTask(task)}
                           className="p-1 text-neutral-300 hover:text-neutral-900 rounded transition-colors"
-                          title="Edit task details"
+                          title="Edit task"
                         >
                           <Edit2 className="w-3 h-3" />
                         </button>
@@ -330,7 +320,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                         <button
                           onClick={() => storage.removeTaskFromDate(selectedDate, task.id)}
                           className="p-1 text-neutral-300 hover:text-red-500 rounded transition-colors"
-                          title="Unschedule from this day"
+                          title="Remove from this day"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -340,22 +330,26 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                 </ul>
               )}
             </div>
+          </div>
 
-            {/* Section B: Planned Habits (Only dragged-in habits count toward streak!) */}
-            <div className="space-y-2 pt-4 border-t border-[#ebebeb]">
-              <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider flex items-center justify-between">
-                <span>Habits Dragged In ({plannedHabits.length})</span>
-                <span className="text-[10px] text-neutral-400 font-normal lowercase">
-                  (only dragged-in habits affect streaks)
+          {/* Card B: Planned Habits for the Day */}
+          <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle p-5 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-[#ebebeb] mb-3">
+                <div className="flex items-center gap-2">
+                  <Flame className="w-4 h-4 text-orange-500" />
+                  <h2 className="text-sm font-semibold text-neutral-900">
+                    Planned Habits
+                  </h2>
+                </div>
+                <span className="text-xs font-mono text-neutral-400">
+                  {habitsDoneOnDate}/{plannedHabits.length}
                 </span>
               </div>
 
               {plannedHabits.length === 0 ? (
-                <div className="py-5 border-2 border-dashed border-[#ebebeb] rounded-lg text-center">
-                  <p className="text-xs text-neutral-500">No habits dragged in for this day.</p>
-                  <p className="text-[11px] text-neutral-400 mt-0.5">
-                    Drag habits from the available pool on the right to track them without losing streaks on skipped days.
-                  </p>
+                <div className="py-10 text-center text-xs text-neutral-400 border border-dashed border-[#ebebeb] rounded-lg">
+                  No habits planned for this day.
                 </div>
               ) : (
                 <ul className="divide-y divide-[#ebebeb]/70">
@@ -366,7 +360,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                         key={habit.id}
                         draggable
                         onDragStart={(e) => handleDragStart(e, 'habit', habit.id)}
-                        className="py-3 flex items-center justify-between gap-3 group hover:bg-[#fafafa]/80 -mx-2 px-2 rounded-md transition-colors"
+                        className="py-2.5 flex items-center justify-between gap-3 group hover:bg-[#fafafa]/80 -mx-2 px-2 rounded-md transition-colors"
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <GripVertical className="w-3.5 h-3.5 text-neutral-300 group-hover:text-neutral-500 cursor-grab flex-shrink-0" />
@@ -392,12 +386,12 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="flex items-center gap-0.5 text-[11px] font-mono text-neutral-500">
                             <Flame className={`w-3.5 h-3.5 ${habit.streak > 0 ? 'text-orange-500 fill-orange-500' : 'text-neutral-300'}`} />
-                            <span>{habit.streak}d streak</span>
+                            <span>{habit.streak}d</span>
                           </span>
                           <button
                             onClick={() => storage.removeHabitFromDate(selectedDate, habit.id)}
                             className="p-1 text-neutral-300 hover:text-red-500 rounded transition-colors"
-                            title="Remove habit from this day (won't penalize streak)"
+                            title="Remove habit from this day"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -411,111 +405,99 @@ export const TodayPage: React.FC<TodayPageProps> = ({
           </div>
         </div>
 
-        {/* Right Column (5 cols): Interactive Calendar + Drag Pool */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Calendar Widget */}
-          <CalendarView
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            tasks={tasks}
-            habits={habits}
-            onDropTaskOnDate={handleDropOnCalendarDate}
-            onDropHabitOnDate={handleDropHabitOnCalendarDate}
-          />
-
-          {/* Draggable Pool: Available Tasks */}
-          <div className="bg-white rounded-lg border border-[#ebebeb] shadow-subtle p-4">
-            <div className="flex items-center justify-between pb-2.5 border-b border-[#ebebeb] mb-3">
-              <span className="text-xs font-semibold text-neutral-900">
-                Available Tasks to Drag In
-              </span>
-              <button
-                onClick={() => onNavigate('tasks')}
-                className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
-              >
-                All tasks <ArrowRight className="w-3 h-3" />
-              </button>
+        {/* 3. Available Tray: Drag items into today */}
+        {(availableTasks.length > 0 || availableHabits.length > 0) && (
+          <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle p-4">
+            <div className="flex items-center gap-2 text-xs font-semibold text-neutral-800 mb-3">
+              <Layers className="w-3.5 h-3.5 text-neutral-400" />
+              <span>Available to drag or add to this day</span>
             </div>
 
-            {availableTasks.length === 0 ? (
-              <p className="text-xs text-neutral-400 py-3 text-center">
-                All active tasks are planned!
-              </p>
-            ) : (
-              <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                {availableTasks.slice(0, 8).map((task) => (
-                  <div
-                    key={task.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, 'task', task.id)}
-                    className="p-2 text-xs bg-[#fafafa] hover:bg-neutral-100 border border-[#ebebeb] rounded-md flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing transition-colors"
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <GripVertical className="w-3 h-3 text-neutral-400 flex-shrink-0" />
-                      <span className="truncate text-neutral-800">{task.title}</span>
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => setEditingTask(task)}
-                        className="p-1 text-neutral-400 hover:text-neutral-900 rounded"
-                        title="Edit task"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={() => storage.addTaskToDate(selectedDate, task.id)}
-                        className="p-1 text-primary hover:bg-[#ebf5ff] rounded transition-colors"
-                        title="Add to selected day"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Available Tasks */}
+              {availableTasks.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider flex items-center gap-1">
+                    <CheckSquare className="w-3 h-3" />
+                    <span>Tasks ({availableTasks.length})</span>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
+                    {availableTasks.slice(0, 10).map((task) => (
+                      <div
+                        key={task.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, 'task', task.id)}
+                        className="p-1.5 px-2 text-xs bg-[#fafafa] hover:bg-neutral-100 border border-[#ebebeb] rounded-md flex items-center gap-2 cursor-grab active:cursor-grabbing transition-colors"
+                      >
+                        <GripVertical className="w-3 h-3 text-neutral-400" />
+                        <span className="truncate max-w-[160px] text-neutral-800">{task.title}</span>
+                        <button
+                          onClick={() => storage.addTaskToDate(selectedDate, task.id)}
+                          className="p-0.5 text-primary hover:bg-[#ebf5ff] rounded"
+                          title="Add to day"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Available Habits */}
+              {availableHabits.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider flex items-center gap-1">
+                    <Activity className="w-3 h-3" />
+                    <span>Habits ({availableHabits.length})</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
+                    {availableHabits.map((habit) => (
+                      <div
+                        key={habit.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, 'habit', habit.id)}
+                        className="p-1.5 px-2 text-xs bg-[#fafafa] hover:bg-neutral-100 border border-[#ebebeb] rounded-md flex items-center gap-2 cursor-grab active:cursor-grabbing transition-colors"
+                      >
+                        <GripVertical className="w-3 h-3 text-neutral-400" />
+                        <span className="truncate max-w-[160px] text-neutral-800">{habit.name}</span>
+                        <button
+                          onClick={() => storage.addHabitToDate(selectedDate, habit.id)}
+                          className="p-0.5 text-primary hover:bg-[#ebf5ff] rounded"
+                          title="Add habit to day"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
+        )}
+      </div>
 
-          {/* Draggable Pool: Available Habits */}
-          {availableHabits.length > 0 && (
-            <div className="bg-white rounded-lg border border-[#ebebeb] shadow-subtle p-4">
-              <div className="flex items-center justify-between pb-2.5 border-b border-[#ebebeb] mb-3">
-                <span className="text-xs font-semibold text-neutral-900">
-                  Available Habits to Drag In
-                </span>
-                <button
-                  onClick={() => onNavigate('tracker')}
-                  className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
-                >
-                  Tracker <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-
-              <div className="space-y-1.5">
-                {availableHabits.map((habit) => (
-                  <div
-                    key={habit.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, 'habit', habit.id)}
-                    className="p-2 text-xs bg-[#fafafa] hover:bg-neutral-100 border border-[#ebebeb] rounded-md flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing transition-colors"
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <GripVertical className="w-3 h-3 text-neutral-400 flex-shrink-0" />
-                      <span className="truncate text-neutral-800">{habit.name}</span>
-                    </div>
-                    <button
-                      onClick={() => storage.addHabitToDate(selectedDate, habit.id)}
-                      className="p-1 text-primary hover:bg-[#ebf5ff] rounded transition-colors flex-shrink-0"
-                      title="Add to selected day"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      {/* 4. Large Full-Width Calendar Underneath */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-neutral-900 tracking-tight">
+            Schedule & Overview
+          </h2>
+          <span className="text-xs text-neutral-400">
+            Click any day to customize its plan
+          </span>
         </div>
+
+        <CalendarView
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          tasks={tasks}
+          habits={habits}
+          dayPlans={dayPlans}
+          onDropTaskOnDate={handleDropOnCalendarDate}
+          onDropHabitOnDate={handleDropHabitOnCalendarDate}
+        />
       </div>
 
       {/* Task Edit Modal */}

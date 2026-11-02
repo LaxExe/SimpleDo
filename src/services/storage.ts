@@ -24,6 +24,32 @@ export const PRESET_INBOX_COLORS = [
   '#64748b', // Slate
 ];
 
+/**
+ * Sorts tasks so that active (uncompleted) tasks appear first,
+ * prioritized by High -> Medium -> Low, and completed tasks appear at the bottom.
+ */
+export function sortTasks(tasks: Task[]): Task[] {
+  const priorityWeight: Record<Task['priority'], number> = {
+    high: 3,
+    medium: 2,
+    low: 1,
+  };
+
+  return [...tasks].sort((a, b) => {
+    // 1. Active before completed
+    if (a.completed !== b.completed) {
+      return a.completed ? 1 : -1;
+    }
+    // 2. High priority before low
+    const weightDiff = priorityWeight[b.priority] - priorityWeight[a.priority];
+    if (weightDiff !== 0) {
+      return weightDiff;
+    }
+    // 3. Newest first
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
+
 const defaultInboxes: InboxGroup[] = [
   {
     id: 'inbox-general',

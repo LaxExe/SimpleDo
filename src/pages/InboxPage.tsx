@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Task, InboxGroup, Priority } from '../types';
-import { storage, getTodayStr, PRESET_INBOX_COLORS } from '../services/storage';
+import { storage, getTodayStr, PRESET_INBOX_COLORS, sortTasks } from '../services/storage';
 import { TaskEditModal } from '../components/TaskEditModal';
 import { 
   Inbox, 
@@ -42,12 +42,19 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const todayStr = getTodayStr();
+  const todayPlan = storage.getDayPlan(todayStr);
 
-  // Filter tasks based on selected inbox
-  const filteredTasks = tasks.filter((t) => {
-    if (selectedInboxId === 'all') return true;
-    return (t.inboxId || 'inbox-general') === selectedInboxId;
-  });
+  const isPlannedForToday = (task: Task) => {
+    return task.scheduledDate === todayStr || todayPlan.plannedTaskIds.includes(task.id);
+  };
+
+  const handleToggleToday = (taskId: string, isCurrentlyPlanned: boolean) => {
+    if (isCurrentlyPlanned) {
+      storage.removeTaskFromDate(todayStr, taskId);
+    } else {
+      storage.addTaskToDate(todayStr, taskId);
+    }
+  };
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,9 +110,13 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
     setEditingInbox(null);
   };
 
-  const handleScheduleForToday = (taskId: string) => {
-    storage.addTaskToDate(todayStr, taskId);
-  };
+  // Filter tasks based on selected inbox, and sort so active tasks appear first
+  const rawFilteredTasks = tasks.filter((t) => {
+    if (selectedInboxId === 'all') return true;
+    return (t.inboxId || 'inbox-general') === selectedInboxId;
+  });
+
+  const filteredTasks = sortTasks(rawFilteredTasks);
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -466,7 +477,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
             </div>
           </form>
 
-          {/* Tasks List */}
+          {/* Tasks List (prioritizing active tasks) */}
           <div className="bg-white rounded-lg border border-[#ebebeb] shadow-subtle overflow-hidden">
             <div className="p-3.5 bg-[#fafafa] border-b border-[#ebebeb] flex items-center justify-between text-xs text-neutral-600 font-medium">
               <span>Tasks ({filteredTasks.length})</span>
@@ -487,6 +498,8 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
               <ul className="divide-y divide-[#ebebeb]/70">
                 {filteredTasks.map((task) => {
                   const inboxInfo = inboxes.find((i) => i.id === task.inboxId);
+                  const plannedToday = isPlannedForToday(task);
+
                   return (
                     <li
                       key={task.id}
@@ -537,13 +550,21 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
                           </span>
                         )}
 
-                        {/* 1-click schedule to today */}
+                        {/* Today Button: Green Checkmark when added to today, Yellow Sun when not */}
                         <button
-                          onClick={() => handleScheduleForToday(task.id)}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-neutral-700 hover:text-primary hover:bg-[#ebf5ff] rounded transition-colors"
-                          title="Schedule for Today"
+                          onClick={() => handleToggleToday(task.id, plannedToday)}
+                          className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded transition-all ${
+                            plannedToday
+                              ? 'bg-green-50 text-green-700 border border-green-200/80 shadow-2xs'
+                              : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 border border-transparent'
+                          }`}
+                          title={plannedToday ? 'Planned for Today (click to remove)' : 'Add to Today'}
                         >
-                          <Sun className="w-3 h-3 text-amber-500" />
+                          {plannedToday ? (
+                            <Check className="w-3.5 h-3.5 text-green-600 stroke-[2.5]" />
+                          ) : (
+                            <Sun className="w-3.5 h-3.5 text-amber-500" />
+                          )}
                           <span>Today</span>
                         </button>
 

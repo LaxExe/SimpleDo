@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Task, InboxGroup, Priority } from '../types';
-import { storage, getTodayStr } from '../services/storage';
+import { storage, getTodayStr, sortTasks } from '../services/storage';
 import { TaskEditModal } from '../components/TaskEditModal';
 import { 
   Plus, 
@@ -8,9 +8,10 @@ import {
   CheckCircle2, 
   Circle, 
   Calendar, 
-  Tag,
-  Sun,
-  Edit2
+  Tag, 
+  Sun, 
+  Edit2,
+  Check
 } from 'lucide-react';
 
 interface TasksPageProps {
@@ -28,6 +29,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const todayStr = getTodayStr();
+  const todayPlan = storage.getDayPlan(todayStr);
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,12 +50,27 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
     setIsAdding(false);
   };
 
-  const filteredTasks = tasks.filter((t) => {
+  const isPlannedForToday = (task: Task) => {
+    return task.scheduledDate === todayStr || todayPlan.plannedTaskIds.includes(task.id);
+  };
+
+  const handleToggleToday = (taskId: string, isCurrentlyPlanned: boolean) => {
+    if (isCurrentlyPlanned) {
+      storage.removeTaskFromDate(todayStr, taskId);
+    } else {
+      storage.addTaskToDate(todayStr, taskId);
+    }
+  };
+
+  const rawFilteredTasks = tasks.filter((t) => {
     if (filter === 'active') return !t.completed;
     if (filter === 'completed') return t.completed;
     if (filter === 'high') return t.priority === 'high' && !t.completed;
     return true;
   });
+
+  // Prioritize active tasks (high -> medium -> low), completed at the bottom
+  const filteredTasks = sortTasks(rawFilteredTasks);
 
   const completedCount = tasks.filter((t) => t.completed).length;
   const pendingCount = tasks.length - completedCount;
@@ -196,6 +213,8 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
           <ul className="divide-y divide-[#ebebeb]/70">
             {filteredTasks.map((task) => {
               const inboxInfo = inboxes.find((i) => i.id === task.inboxId);
+              const plannedToday = isPlannedForToday(task);
+
               return (
                 <li
                   key={task.id}
@@ -257,13 +276,21 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
                       </span>
                     )}
 
-                    {/* Quick Schedule for Today */}
+                    {/* Today Button: Green Checkmark when added to today, Yellow Sun when not */}
                     <button
-                      onClick={() => storage.addTaskToDate(todayStr, task.id)}
-                      className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-neutral-600 hover:text-primary hover:bg-[#ebf5ff] rounded transition-colors"
-                      title="Schedule for Today"
+                      onClick={() => handleToggleToday(task.id, plannedToday)}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded transition-all ${
+                        plannedToday
+                          ? 'bg-green-50 text-green-700 border border-green-200/80 shadow-2xs'
+                          : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 border border-transparent'
+                      }`}
+                      title={plannedToday ? 'Planned for Today (click to remove)' : 'Add to Today'}
                     >
-                      <Sun className="w-3 h-3 text-amber-500" />
+                      {plannedToday ? (
+                        <Check className="w-3.5 h-3.5 text-green-600 stroke-[2.5]" />
+                      ) : (
+                        <Sun className="w-3.5 h-3.5 text-amber-500" />
+                      )}
                       <span>Today</span>
                     </button>
 

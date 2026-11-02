@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Task, Habit } from '../types';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { Task, Habit, DayPlan } from '../types';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2, Flame, Circle } from 'lucide-react';
 import { getTodayStr } from '../services/storage';
 
 interface CalendarViewProps {
@@ -8,6 +8,7 @@ interface CalendarViewProps {
   onSelectDate: (date: string) => void;
   tasks: Task[];
   habits: Habit[];
+  dayPlans: Record<string, DayPlan>;
   onDropTaskOnDate?: (taskId: string, targetDate: string) => void;
   onDropHabitOnDate?: (habitId: string, targetDate: string) => void;
 }
@@ -16,6 +17,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   selectedDate,
   onSelectDate,
   tasks,
+  dayPlans,
   onDropTaskOnDate,
   onDropHabitOnDate,
 }) => {
@@ -51,18 +53,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     onSelectDate(todayStr);
   };
 
-  // Build tasks-by-date map
-  const taskCountByDate: Record<string, { total: number; pending: number }> = {};
+  // Group tasks by date
+  const tasksByDate: Record<string, Task[]> = {};
   tasks.forEach((task) => {
     const date = task.scheduledDate || task.dueDate;
     if (date) {
-      if (!taskCountByDate[date]) {
-        taskCountByDate[date] = { total: 0, pending: 0 };
+      if (!tasksByDate[date]) {
+        tasksByDate[date] = [];
       }
-      taskCountByDate[date].total++;
-      if (!task.completed) {
-        taskCountByDate[date].pending++;
-      }
+      tasksByDate[date].push(task);
     }
   });
 
@@ -80,59 +79,78 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
 
   return (
-    <div className="bg-white rounded-lg border border-[#ebebeb] shadow-subtle p-4 sm:p-5">
-      {/* Calendar Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <CalendarIcon className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold text-neutral-900 tracking-tight">
-            {monthName}
-          </span>
+    <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle overflow-hidden">
+      {/* Calendar Top Toolbar */}
+      <div className="p-4 sm:px-6 flex items-center justify-between border-b border-[#ebebeb] bg-[#fafafa]">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-white rounded-lg border border-[#ebebeb] shadow-2xs">
+            <CalendarIcon className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-base sm:text-lg font-semibold text-neutral-900 tracking-tight">
+              {monthName}
+            </h2>
+            <p className="text-xs text-neutral-500 hidden sm:block">
+              Click a date to plan, or drag tasks and habits onto any day.
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
+
+        <div className="flex items-center gap-2">
           <button
             onClick={handleJumpToToday}
-            className="px-2 py-1 text-[11px] font-medium text-neutral-600 hover:text-neutral-900 hover:bg-[#fafafa] rounded border border-[#ebebeb] transition-colors mr-1"
+            className="px-3 py-1.5 text-xs font-medium text-neutral-700 hover:text-neutral-900 bg-white hover:bg-neutral-100 rounded-md border border-[#ebebeb] transition-colors shadow-2xs"
           >
             Today
           </button>
-          <button
-            onClick={handlePrevMonth}
-            className="p-1 text-neutral-500 hover:text-neutral-900 hover:bg-[#fafafa] rounded transition-colors"
-            title="Previous month"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <button
-            onClick={handleNextMonth}
-            className="p-1 text-neutral-500 hover:text-neutral-900 hover:bg-[#fafafa] rounded transition-colors"
-            title="Next month"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
+          <div className="flex items-center border border-[#ebebeb] rounded-md bg-white overflow-hidden shadow-2xs">
+            <button
+              onClick={handlePrevMonth}
+              className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-[#fafafa] transition-colors"
+              title="Previous month"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="w-[1px] h-4 bg-[#ebebeb]" />
+            <button
+              onClick={handleNextMonth}
+              className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-[#fafafa] transition-colors"
+              title="Next month"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Weekday Labels */}
-      <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-neutral-400 mb-2 font-mono">
-        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((w) => (
-          <div key={w} className="py-1">
-            {w}
+      {/* Weekday Header */}
+      <div className="grid grid-cols-7 border-b border-[#ebebeb] bg-[#fafafa]/80 text-center text-xs font-mono font-medium text-neutral-500">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((weekday) => (
+          <div key={weekday} className="py-2.5 border-r last:border-r-0 border-[#ebebeb]">
+            {weekday}
           </div>
         ))}
       </div>
 
-      {/* Days Grid */}
-      <div className="grid grid-cols-7 gap-1">
+      {/* Large Calendar Grid */}
+      <div className="grid grid-cols-7 divide-x divide-y divide-[#ebebeb] bg-neutral-100/30">
         {cells.map((cell, idx) => {
           if (!cell) {
-            return <div key={`empty-${idx}`} className="h-9 sm:h-11" />;
+            return (
+              <div
+                key={`empty-${idx}`}
+                className="min-h-[90px] sm:min-h-[115px] bg-[#fafafa]/50 p-1.5"
+              />
+            );
           }
 
           const isSelected = cell.dateStr === selectedDate;
           const isToday = cell.dateStr === todayStr;
-          const counts = taskCountByDate[cell.dateStr];
           const isOver = dragOverDate === cell.dateStr;
+
+          const dateTasks = tasksByDate[cell.dateStr] || [];
+          const datePlan = dayPlans[cell.dateStr];
+          const plannedHabitsCount = datePlan?.plannedHabitIds?.length || 0;
 
           return (
             <div
@@ -156,58 +174,73 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   onDropHabitOnDate(habitId, cell.dateStr);
                 }
               }}
-              className={`h-9 sm:h-11 rounded-md flex flex-col items-center justify-center relative cursor-pointer transition-all select-none ${
+              className={`min-h-[90px] sm:min-h-[115px] p-2 flex flex-col justify-between cursor-pointer transition-all select-none group ${
                 isSelected
-                  ? 'bg-neutral-900 text-white font-medium shadow-sm'
+                  ? 'bg-blue-50/50 ring-2 ring-inset ring-primary z-10'
                   : isOver
-                  ? 'bg-blue-50 border-2 border-dashed border-primary text-primary'
+                  ? 'bg-blue-100/50 border-2 border-dashed border-primary'
                   : isToday
-                  ? 'bg-neutral-100 text-neutral-900 font-semibold border border-neutral-300'
-                  : 'hover:bg-[#fafafa] text-neutral-800'
+                  ? 'bg-white'
+                  : 'bg-white hover:bg-[#fafafa]'
               }`}
             >
-              <span className="text-xs leading-none">{cell.day}</span>
+              {/* Day Header: Number + Indicators */}
+              <div className="flex items-center justify-between mb-1.5">
+                <span
+                  className={`text-xs font-mono font-medium inline-flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
+                    isToday
+                      ? 'bg-neutral-900 text-white font-bold'
+                      : isSelected
+                      ? 'bg-primary text-white font-bold'
+                      : 'text-neutral-700 group-hover:text-neutral-900'
+                  }`}
+                >
+                  {cell.day}
+                </span>
 
-              {/* Task Indicator dots */}
-              {counts && counts.total > 0 && (
-                <div className="flex items-center gap-0.5 mt-1">
+                {/* Habit indicator if habits scheduled */}
+                {plannedHabitsCount > 0 && (
                   <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      isSelected
-                        ? 'bg-blue-300'
-                        : counts.pending > 0
-                        ? 'bg-primary'
-                        : 'bg-green-500'
+                    className="inline-flex items-center gap-0.5 text-[10px] font-mono text-orange-600 bg-orange-50 px-1.5 py-0.2 rounded"
+                    title={`${plannedHabitsCount} habits planned`}
+                  >
+                    <Flame className="w-2.5 h-2.5 fill-orange-500 text-orange-500" />
+                    <span>{plannedHabitsCount}</span>
+                  </span>
+                )}
+              </div>
+
+              {/* Task Items Preview */}
+              <div className="space-y-1 flex-1 overflow-hidden">
+                {dateTasks.slice(0, 3).map((task) => (
+                  <div
+                    key={task.id}
+                    className={`text-[10px] truncate px-1.5 py-0.5 rounded flex items-center gap-1 border transition-colors ${
+                      task.completed
+                        ? 'bg-neutral-100 text-neutral-400 border-neutral-200 line-through'
+                        : task.priority === 'high'
+                        ? 'bg-red-50 text-red-700 border-red-200/60 font-medium'
+                        : 'bg-[#fafafa] text-neutral-800 border-[#ebebeb]'
                     }`}
-                  />
-                  {counts.total > 1 && (
-                    <span
-                      className={`text-[9px] font-mono leading-none ${
-                        isSelected ? 'text-white/80' : 'text-neutral-400'
-                      }`}
-                    >
-                      {counts.total}
-                    </span>
-                  )}
-                </div>
-              )}
+                  >
+                    {task.completed ? (
+                      <CheckCircle2 className="w-2.5 h-2.5 text-primary flex-shrink-0" />
+                    ) : (
+                      <Circle className="w-2.5 h-2.5 text-neutral-400 flex-shrink-0" />
+                    )}
+                    <span className="truncate">{task.title}</span>
+                  </div>
+                ))}
+
+                {dateTasks.length > 3 && (
+                  <div className="text-[9px] font-mono text-neutral-400 pl-1">
+                    +{dateTasks.length - 3} more
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
-      </div>
-
-      <div className="mt-3 pt-3 border-t border-[#ebebeb] flex items-center justify-between text-[11px] text-neutral-500">
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-primary" />
-          <span>Active tasks</span>
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-green-500" />
-          <span>Completed</span>
-        </span>
-        <span className="text-[10px] text-neutral-400 italic">
-          Drag tasks or habits to date
-        </span>
       </div>
     </div>
   );

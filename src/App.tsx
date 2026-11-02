@@ -30,9 +30,14 @@ export function App() {
   const pendingTasksCount = data.tasks.filter((t) => !t.completed).length;
   const inboxTasksCount = data.tasks.length;
 
+  const assignedHabitsCount = dayPlan.plannedHabitIds.length;
+  const doneAssignedHabitsCount = data.habits.filter(
+    (h) => dayPlan.plannedHabitIds.includes(h.id) && h.completedDates.includes(todayStr)
+  ).length;
+
   const habitsTodayDone = {
-    done: data.habits.filter((h) => h.completedDates.includes(todayStr)).length,
-    total: data.habits.length,
+    done: doneAssignedHabitsCount,
+    total: assignedHabitsCount,
   };
 
   return (
@@ -54,6 +59,7 @@ export function App() {
             tasks={data.tasks}
             habits={data.habits}
             inboxes={data.inboxes}
+            dayPlans={data.dayPlans}
             onNavigate={setCurrentPage}
           />
         )}
