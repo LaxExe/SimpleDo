@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Task, InboxGroup, Priority } from '../types';
-import { storage, getTodayStr, sortTasksByInbox } from '../services/storage';
+import { storage, getTodayStr, sortTasks } from '../services/storage';
 import { TaskEditModal } from '../components/TaskEditModal';
 import { 
   Plus, 
@@ -8,11 +8,10 @@ import {
   CheckCircle2, 
   Circle, 
   Calendar, 
+  Tag, 
   Sun, 
   Edit2,
-  Check,
-  ChevronLeft,
-  ArrowRight
+  Check
 } from 'lucide-react';
 
 interface TasksPageProps {
@@ -21,15 +20,14 @@ interface TasksPageProps {
 }
 
 export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
-  const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'high'>('all');
+  // Show active tasks only by default
+  const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'high'>('active');
   const [title, setTitle] = useState('');
   const [inboxId, setInboxId] = useState(inboxes[0]?.id || 'inbox-general');
   const [priority, setPriority] = useState<Priority>('medium');
   const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
   const [isAdding, setIsAdding] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   const todayStr = getTodayStr();
   const todayPlan = storage.getDayPlan(todayStr);
@@ -72,24 +70,11 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
     return true;
   });
 
-  // Sort by inbox: General first, other inboxes sorted by name matching their colors
-  const { allOrderedTasks } = sortTasksByInbox(rawFilteredTasks, inboxes);
+  // Prioritize active tasks (high -> medium -> low), completed at the bottom
+  const filteredTasks = sortTasks(rawFilteredTasks);
 
   const completedCount = tasks.filter((t) => t.completed).length;
   const pendingCount = tasks.length - completedCount;
-  const hasStackedTasks = allOrderedTasks.length > 2;
-
-  const handleScrollRight = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: 340, behavior: 'smooth' });
-    }
-  };
-
-  const handleScrollLeft = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: -340, behavior: 'smooth' });
-    }
-  };
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -179,7 +164,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
               <button
                 type="submit"
                 disabled={!title.trim()}
-                className="px-3.5 py-1 text-xs font-medium text-white bg-primary hover:bg-primary-hover rounded-md transition-colors disabled:opacity-50"
+                className="px-3.5 py-1 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-md transition-colors disabled:opacity-50"
               >
                 Save Task
               </button>
@@ -188,7 +173,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
         </form>
       )}
 
-      {/* Filters and Stats + Scroll Arrows */}
+      {/* Filters and Stats */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
         <div className="flex items-center gap-1 bg-[#ebebeb]/50 p-1 rounded-full border border-[#ebebeb] w-fit">
           {(['all', 'active', 'completed', 'high'] as const).map((mode) => (
@@ -206,111 +191,52 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
           ))}
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="text-xs text-neutral-500 font-mono">
-            <span>{pendingCount} active</span>
-            <span className="mx-1.5">•</span>
-            <span>{completedCount} completed</span>
-          </div>
-
-          {hasStackedTasks && (
-            <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-[#ebebeb] shadow-2xs">
-              <button
-                onClick={handleScrollLeft}
-                className="p-1 text-neutral-600 hover:text-neutral-900 hover:bg-[#fafafa] rounded transition-colors"
-                title="Scroll left"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={handleScrollRight}
-                className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded transition-colors"
-                title="Scroll right"
-              >
-                <span>Scroll</span>
-                <ArrowRight className="w-3 h-3" />
-              </button>
-            </div>
-          )}
+        <div className="flex items-center gap-3 text-xs text-neutral-500 font-mono">
+          <span>{pendingCount} active</span>
+          <span>•</span>
+          <span>{completedCount} completed</span>
         </div>
       </div>
 
-      {/* Tasks List - Sorted by Inbox with Matching Colors & Horizontal Scroll Deck */}
-      {allOrderedTasks.length === 0 ? (
-        <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle py-12 text-center">
-          <CheckCircle2 className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
-          <p className="text-xs font-medium text-neutral-700">No tasks found</p>
-          <p className="text-xs text-neutral-400 mt-0.5">
-            {filter === 'completed'
-              ? 'Check off tasks to see them completed here.'
-              : 'Click "Add Task" above to create one.'}
-          </p>
-        </div>
-      ) : (
-        <div
-          ref={scrollRef}
-          className="flex gap-4 overflow-x-auto pb-3 pt-1 scroll-smooth snap-x"
-          style={{ scrollbarWidth: 'thin' }}
-        >
-          {allOrderedTasks.map(({ task, inbox, isGeneral }) => {
-            const inboxColor = inbox?.color || '#0068d6';
-            const plannedToday = isPlannedForToday(task);
+      {/* Tasks List */}
+      <div className="bg-white rounded-lg border border-[#ebebeb] shadow-subtle overflow-hidden">
+        {filteredTasks.length === 0 ? (
+          <div className="py-12 text-center">
+            <CheckCircle2 className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
+            <p className="text-xs font-medium text-neutral-700">No tasks found</p>
+            <p className="text-xs text-neutral-400 mt-0.5">
+              {filter === 'completed'
+                ? 'Check off tasks to see them completed here.'
+                : 'Click "Add Task" above to create one.'}
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-[#ebebeb]/70">
+            {filteredTasks.map((task) => {
+              const inboxInfo = inboxes.find((i) => i.id === task.inboxId);
+              const plannedToday = isPlannedForToday(task);
 
-            return (
-              <div
-                key={task.id}
-                className={`w-[290px] sm:w-[330px] shrink-0 snap-start bg-white rounded-xl border shadow-subtle p-5 flex flex-col justify-between transition-all group ${
-                  isGeneral
-                    ? 'border-[#ebebeb] hover:border-neutral-400'
-                    : 'border-l-4'
-                }`}
-                style={!isGeneral ? { borderLeftColor: inboxColor, borderColor: '#ebebeb' } : undefined}
-              >
-                <div className="space-y-3">
-                  {/* Inbox Label matching inbox color */}
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium border"
-                      style={
-                        isGeneral
-                          ? { backgroundColor: '#f5f5f5', color: '#525252', borderColor: '#e5e5e5' }
-                          : {
-                              backgroundColor: `${inboxColor}12`,
-                              color: inboxColor,
-                              borderColor: `${inboxColor}30`,
-                            }
-                      }
-                    >
-                      <span
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{ backgroundColor: isGeneral ? '#737373' : inboxColor }}
-                      />
-                      <span>{inbox?.name || 'General Inbox'}</span>
-                    </span>
-
-                    {task.priority === 'high' && (
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-red-50 text-red-600 font-medium border border-red-200/50">
-                        High
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Checkbox and Task Title */}
-                  <div className="flex items-start gap-3">
+              return (
+                <li
+                  key={task.id}
+                  className="p-3.5 sm:px-5 flex items-center justify-between gap-3 hover:bg-[#fafafa]/80 transition-colors group"
+                >
+                  {/* Left: Checkbox + Title */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <button
                       onClick={() => storage.toggleTask(task.id)}
-                      className="mt-0.5 flex-shrink-0 transition-transform active:scale-95"
+                      className="flex-shrink-0 transition-transform active:scale-95"
                     >
                       {task.completed ? (
-                        <CheckCircle2 className="w-5 h-5 text-neutral-900 fill-neutral-900/10" />
+                        <CheckCircle2 className="w-4 h-4 text-neutral-900 fill-neutral-200" />
                       ) : (
-                        <Circle className="w-5 h-5 text-neutral-300 hover:text-neutral-700" />
+                        <Circle className="w-4 h-4 text-neutral-300 group-hover:text-neutral-500" />
                       )}
                     </button>
 
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0">
                       <p
-                        className={`text-base font-medium leading-snug break-words ${
+                        className={`text-xs font-medium truncate ${
                           task.completed
                             ? 'line-through text-neutral-400'
                             : 'text-neutral-900'
@@ -318,57 +244,81 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
                       >
                         {task.title}
                       </p>
-                      {task.dueDate && (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-neutral-400 font-mono mt-1">
-                          <Calendar className="w-3 h-3" />
-                          {task.dueDate}
-                        </span>
-                      )}
                     </div>
                   </div>
-                </div>
 
-                {/* Actions: Today Checkmark toggle, Edit, Delete */}
-                <div className="mt-4 pt-3 border-t border-[#ebebeb] flex items-center justify-between">
-                  <button
-                    onClick={() => handleToggleToday(task.id, plannedToday)}
-                    className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded transition-all ${
-                      plannedToday
-                        ? 'bg-green-50 text-green-700 border border-green-200/80 shadow-2xs'
-                        : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 border border-transparent'
-                    }`}
-                    title={plannedToday ? 'Planned for Today (click to remove)' : 'Add to Today'}
-                  >
-                    {plannedToday ? (
-                      <Check className="w-3.5 h-3.5 text-green-600 stroke-[2.5]" />
-                    ) : (
-                      <Sun className="w-3.5 h-3.5 text-amber-500" />
+                  {/* Right: Badges & Actions */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Priority Tag */}
+                    {task.priority === 'high' && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-600 font-medium border border-red-200/50">
+                        High
+                      </span>
                     )}
-                    <span>Today</span>
-                  </button>
+                    {task.priority === 'medium' && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium border border-amber-200/50">
+                        Med
+                      </span>
+                    )}
 
-                  <div className="flex items-center gap-1">
+                    {/* Inbox / Category Tag */}
+                    {inboxInfo && (
+                      <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-[#fafafa] border border-[#ebebeb] px-2 py-0.5 rounded">
+                        <Tag className="w-2.5 h-2.5" />
+                        {inboxInfo.name}
+                      </span>
+                    )}
+
+                    {/* Due Date */}
+                    {task.dueDate && (
+                      <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-neutral-500 font-mono">
+                        <Calendar className="w-3 h-3" />
+                        {task.dueDate}
+                      </span>
+                    )}
+
+                    {/* Today Button: Green Checkmark when added to today, Gray Sun when not */}
+                    <button
+                      onClick={() => handleToggleToday(task.id, plannedToday)}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded transition-all ${
+                        plannedToday
+                          ? 'bg-green-50 text-green-700 border border-green-200/80 shadow-2xs'
+                          : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 border border-transparent'
+                      }`}
+                      title={plannedToday ? 'Planned for Today (click to remove)' : 'Add to Today'}
+                    >
+                      {plannedToday ? (
+                        <Check className="w-3.5 h-3.5 text-green-600 stroke-[2.5]" />
+                      ) : (
+                        <Sun className="w-3.5 h-3.5 text-neutral-400" />
+                      )}
+                      <span>Today</span>
+                    </button>
+
+                    {/* Edit Task Button */}
                     <button
                       onClick={() => setEditingTask(task)}
-                      className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+                      className="p-1 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
                       title="Edit task details"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
+
+                    {/* Delete button */}
                     <button
                       onClick={() => storage.deleteTask(task.id)}
-                      className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                      className="p-1 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100"
                       title="Delete task"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
 
       {/* Task Edit Modal */}
       <TaskEditModal

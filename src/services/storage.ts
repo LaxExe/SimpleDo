@@ -50,43 +50,6 @@ export function sortTasks(tasks: Task[]): Task[] {
   });
 }
 
-/**
- * Sorts tasks by inbox:
- * - General / default inbox tasks are not sorted by inbox name and appear first.
- * - Other inboxes are sorted alphabetically by inbox name and match their color theme.
- */
-export function sortTasksByInbox(tasks: Task[], inboxes: InboxGroup[]) {
-  const generalInboxId = inboxes.find((i) => i.id === 'inbox-general')?.id || 'inbox-general';
-  const generalInbox = inboxes.find((i) => i.id === generalInboxId) || inboxes[0];
-
-  // 1. General tasks
-  const generalTasks = sortTasks(
-    tasks.filter((t) => !t.inboxId || t.inboxId === generalInboxId || t.inboxId === 'inbox-general')
-  );
-
-  // 2. Other inboxes sorted by name
-  const otherInboxes = inboxes
-    .filter((i) => i.id !== generalInboxId && i.id !== 'inbox-general')
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  const otherInboxGroups = otherInboxes
-    .map((inbox) => ({
-      inbox,
-      tasks: sortTasks(tasks.filter((t) => t.inboxId === inbox.id)),
-    }))
-    .filter((group) => group.tasks.length > 0);
-
-  // Ordered list of all tasks tagged with their inbox
-  const allOrderedTasks: { task: Task; inbox: InboxGroup; isGeneral: boolean }[] = [
-    ...generalTasks.map((t) => ({ task: t, inbox: generalInbox, isGeneral: true })),
-    ...otherInboxGroups.flatMap((group) =>
-      group.tasks.map((t) => ({ task: t, inbox: group.inbox, isGeneral: false }))
-    ),
-  ];
-
-  return { generalTasks, otherInboxGroups, allOrderedTasks };
-}
-
 const defaultInboxes: InboxGroup[] = [
   {
     id: 'inbox-general',

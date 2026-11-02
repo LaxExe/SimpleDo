@@ -77,13 +77,13 @@ export const Navigation: React.FC<NavigationProps> = ({
                     : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/50'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-neutral-900' : 'text-neutral-500'}`} />
                 <span>{tab.label}</span>
                 {tab.badge !== undefined && (
                   <span
                     className={`ml-0.5 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-medium ${
                       isActive
-                        ? 'bg-[#ebf5ff] text-[#0068d6]'
+                        ? 'bg-neutral-200 text-neutral-900'
                         : 'bg-neutral-200/70 text-neutral-600'
                     }`}
                   >

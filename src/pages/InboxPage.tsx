@@ -511,7 +511,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
                           className="flex-shrink-0"
                         >
                           {task.completed ? (
-                            <CheckCircle2 className="w-4 h-4 text-primary fill-primary/10" />
+                            <CheckCircle2 className="w-4 h-4 text-neutral-900 fill-neutral-200" />
                           ) : (
                             <Circle className="w-4 h-4 text-neutral-300 hover:text-neutral-500" />
                           )}
@@ -563,7 +563,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
                           {plannedToday ? (
                             <Check className="w-3.5 h-3.5 text-green-600 stroke-[2.5]" />
                           ) : (
-                            <Sun className="w-3.5 h-3.5 text-amber-500" />
+                            <Sun className="w-3.5 h-3.5 text-neutral-400" />
                           )}
                           <span>Today</span>
                         </button>

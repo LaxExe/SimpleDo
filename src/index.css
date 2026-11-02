@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --ds-focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px #0070f3;
+    --ds-focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px #171717;
   }
 
   body {
@@ -38,4 +38,12 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

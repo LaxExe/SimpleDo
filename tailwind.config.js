@@ -10,15 +10,15 @@ export default {
         background: '#fafafa',
         foreground: '#171717',
         primary: {
-          DEFAULT: '#0068d6',
-          hover: '#0055b3',
+          DEFAULT: '#171717',
+          hover: '#333333',
         },
         secondary: {
-          DEFAULT: '#52aeff',
+          DEFAULT: '#737373',
         },
         accent: {
-          DEFAULT: '#0070f3',
-          hover: '#0060df',
+          DEFAULT: '#525252',
+          hover: '#171717',
         },
         neutral: {
           50: '#fafafa',
@@ -26,10 +26,10 @@ export default {
           200: '#ebebeb',
           300: '#e5e5e5',
           400: '#a8a8a8',
-          500: '#7d7d7d',
-          600: '#666666',
-          700: '#4d4d4d',
-          800: '#333333',
+          500: '#737373',
+          600: '#525252',
+          700: '#404040',
+          800: '#262626',
           900: '#171717',
           950: '#0a0a0a',
         },
@@ -39,6 +39,7 @@ export default {
         mono: ['Geist Mono', 'monospace'],
       },
       boxShadow: {
+        '2xs': '0 1px 2px rgba(0, 0, 0, 0.04)',
         'subtle': '0 0 0 1px #00000014, 0px 2px 2px #0000000a',
         'subtle-hover': '0 0 0 1px #00000020, 0px 4px 6px #0000000f',
         'modal': '0 0 0 1px #00000014, 0px 8px 16px -4px #0000000a, 0px 24px 32px -8px #0000000f',
