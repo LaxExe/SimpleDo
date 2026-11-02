@@ -80,12 +80,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
   return (
     <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle overflow-hidden">
-      {/* Calendar Top Toolbar */}
+      {/* Calendar Top Toolbar - Clean Black Logo, No 2-tone Box */}
       <div className="p-4 sm:px-6 flex items-center justify-between border-b border-[#ebebeb] bg-[#fafafa]">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-white rounded-lg border border-[#ebebeb] shadow-2xs">
-            <CalendarIcon className="w-4 h-4 text-primary" />
-          </div>
+        <div className="flex items-center gap-2.5">
+          <CalendarIcon className="w-5 h-5 text-neutral-900" />
           <div>
             <h2 className="text-base sm:text-lg font-semibold text-neutral-900 tracking-tight">
               {monthName}
@@ -176,9 +174,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               }}
               className={`min-h-[90px] sm:min-h-[115px] p-2 flex flex-col justify-between cursor-pointer transition-all select-none group ${
                 isSelected
-                  ? 'bg-blue-50/50 ring-2 ring-inset ring-primary z-10'
+                  ? 'bg-neutral-100/60 ring-2 ring-inset ring-neutral-900 z-10'
                   : isOver
-                  ? 'bg-blue-100/50 border-2 border-dashed border-primary'
+                  ? 'bg-neutral-100 border-2 border-dashed border-neutral-900'
                   : isToday
                   ? 'bg-white'
                   : 'bg-white hover:bg-[#fafafa]'
@@ -191,7 +189,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     isToday
                       ? 'bg-neutral-900 text-white font-bold'
                       : isSelected
-                      ? 'bg-primary text-white font-bold'
+                      ? 'bg-neutral-800 text-white font-bold'
                       : 'text-neutral-700 group-hover:text-neutral-900'
                   }`}
                 >
@@ -224,7 +222,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     }`}
                   >
                     {task.completed ? (
-                      <CheckCircle2 className="w-2.5 h-2.5 text-primary flex-shrink-0" />
+                      <CheckCircle2 className="w-2.5 h-2.5 text-neutral-900 flex-shrink-0" />
                     ) : (
                       <Circle className="w-2.5 h-2.5 text-neutral-400 flex-shrink-0" />
                     )}

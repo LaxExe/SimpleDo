@@ -14,8 +14,6 @@ import {
   Sparkles,
   X,
   Edit2,
-  CheckSquare,
-  Activity,
   Layers
 } from 'lucide-react';
 
@@ -137,101 +135,248 @@ export const TodayPage: React.FC<TodayPageProps> = ({
     storage.moveTaskToDate(taskId, tomorrowStr, selectedDate);
   };
 
+  const handleRemoveTaskFromDay = (taskId: string) => {
+    storage.removeTaskFromDate(selectedDate, taskId);
+  };
+
+  const handleRemoveHabitFromDay = (habitId: string) => {
+    storage.removeHabitFromDate(selectedDate, habitId);
+  };
+
   const completedPlannedTasks = plannedTasks.filter((t) => t.completed).length;
   const habitsDoneOnDate = plannedHabits.filter((h) => h.completedDates.includes(selectedDate)).length;
 
   return (
-    <div className="space-y-10 animate-fadeIn">
-      {/* 1. Date Header & Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#ebebeb]">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center border border-[#ebebeb] rounded-md bg-white shadow-2xs overflow-hidden">
-            <button
-              onClick={handlePrevDay}
-              className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-[#fafafa] transition-colors"
-              title="Previous Day"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div className="w-[1px] h-4 bg-[#ebebeb]" />
-            <button
-              onClick={handleNextDay}
-              className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-[#fafafa] transition-colors"
-              title="Next Day"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-neutral-900">
-                {formattedDate}
-              </h1>
-              {isToday ? (
-                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-[#ebf5ff] text-[#0068d6] border border-blue-200/60">
-                  Today
-                </span>
-              ) : (
-                <button
-                  onClick={() => setSelectedDate(todayStr)}
-                  className="text-[11px] font-mono text-neutral-500 hover:text-neutral-900 underline"
-                >
-                  Return to Today
-                </button>
-              )}
-            </div>
-          </div>
+    <div className="space-y-12 animate-fadeIn">
+      {/* Date Switcher Bar */}
+      <div className="flex items-center justify-between pb-3 border-b border-[#ebebeb]">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePrevDay}
+            className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-[#fafafa] rounded-md border border-[#ebebeb] transition-colors shadow-2xs"
+            title="Previous Day"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-xs font-mono text-neutral-500">{formattedDate}</span>
+          <button
+            onClick={handleNextDay}
+            className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-[#fafafa] rounded-md border border-[#ebebeb] transition-colors shadow-2xs"
+            title="Next Day"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* Quick Day Stats */}
-        <div className="flex items-center gap-3 text-xs font-mono text-neutral-600 bg-white px-3.5 py-1.5 rounded-full border border-[#ebebeb] shadow-subtle w-fit">
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-            <span>{completedPlannedTasks}/{plannedTasks.length} tasks</span>
-          </span>
-          <span>•</span>
-          <span className="flex items-center gap-1.5">
-            <Flame className="w-3.5 h-3.5 text-orange-500" />
-            <span>{habitsDoneOnDate}/{plannedHabits.length} habits</span>
+        <div className="flex items-center gap-2">
+          {!isToday && (
+            <button
+              onClick={() => setSelectedDate(todayStr)}
+              className="text-xs font-mono text-neutral-500 hover:text-neutral-900 underline"
+            >
+              Return to Today
+            </button>
+          )}
+          <span className="text-xs font-mono text-neutral-600 bg-white px-3 py-1 rounded-full border border-[#ebebeb] shadow-2xs">
+            {completedPlannedTasks}/{plannedTasks.length} tasks • {habitsDoneOnDate}/{plannedHabits.length} habits
           </span>
         </div>
       </div>
 
-      {/* 2. Hero Section: Today's Plan (High Emphasis) */}
-      <div className="space-y-6">
-        {/* Quick Add Focus Task Input */}
-        <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle p-4 sm:p-5">
-          <div className="flex items-center justify-between text-xs font-semibold text-neutral-900 mb-2.5">
-            <span className="flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-accent" />
-              <span>What do you want to accomplish {isToday ? 'today' : 'on this day'}?</span>
-            </span>
-            <span className="text-[11px] font-normal text-neutral-400 font-mono hidden sm:inline">
-              Press Enter
+      {/* ======================================================== */}
+      {/* 1. TOP SECTION: LARGE TEXT "TODAY" LISTING TASKS */}
+      {/* ======================================================== */}
+      <section className="space-y-6">
+        <div>
+          <div className="flex items-baseline justify-between">
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-neutral-900">
+              {isToday ? 'Today' : formattedDate.split(',')[0]}
+            </h1>
+            <span className="text-xs font-mono text-neutral-400">
+              {plannedTasks.length} {plannedTasks.length === 1 ? 'task' : 'tasks'} for today
             </span>
           </div>
-
-          <form onSubmit={handleAddTaskToDay} className="flex gap-2">
-            <input
-              type="text"
-              value={taskInput}
-              onChange={(e) => setTaskInput(e.target.value)}
-              placeholder="Type a task and add it to this day..."
-              className="flex-1 px-3.5 py-2 text-sm bg-[#fafafa] border border-[#ebebeb] rounded-lg focus:outline-none focus:border-neutral-900 transition-colors"
-            />
-            <button
-              type="submit"
-              disabled={!taskInput.trim()}
-              className="px-4 py-2 bg-neutral-900 text-white text-xs font-medium rounded-lg hover:bg-neutral-800 disabled:opacity-40 transition-colors inline-flex items-center gap-1.5 shadow-subtle"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add</span>
-            </button>
-          </form>
+          <p className="text-sm text-neutral-500 mt-1">
+            {isToday
+              ? 'Your active tasks and habits for today. Check them off as you complete them.'
+              : `Viewing scheduled items for ${formattedDate}.`}
+          </p>
         </div>
 
-        {/* Planned Tasks & Habits Droppable Grid */}
+        {/* Large Simple Task List */}
+        <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle divide-y divide-[#ebebeb] overflow-hidden">
+          {plannedTasks.length === 0 ? (
+            <div className="p-8 text-center text-sm text-neutral-400">
+              No tasks scheduled for today. Add or drag tasks below in the plan section.
+            </div>
+          ) : (
+            plannedTasks.map((task) => (
+              <div
+                key={task.id}
+                className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-[#fafafa]/70 transition-colors group"
+              >
+                {/* Large Checkbox & Large Task Title */}
+                <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                  <button
+                    onClick={() => storage.toggleTask(task.id)}
+                    className="flex-shrink-0 transition-transform active:scale-95"
+                  >
+                    {task.completed ? (
+                      <CheckCircle2 className="w-5 h-5 text-neutral-900 fill-neutral-900/10" />
+                    ) : (
+                      <Circle className="w-5 h-5 text-neutral-300 hover:text-neutral-700" />
+                    )}
+                  </button>
+
+                  <div className="min-w-0">
+                    <p
+                      className={`text-base sm:text-lg font-medium leading-snug truncate ${
+                        task.completed
+                          ? 'line-through text-neutral-400'
+                          : 'text-neutral-900'
+                      }`}
+                    >
+                      {task.title}
+                    </p>
+                    {task.category && (
+                      <span className="text-[11px] font-mono text-neutral-400">
+                        {task.category}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Badges & Effortless Remove Action */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {task.priority === 'high' && (
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-red-50 text-red-600 font-medium border border-red-200/50">
+                      High
+                    </span>
+                  )}
+
+                  <button
+                    onClick={() => handleMoveToTomorrow(task.id)}
+                    className="text-xs text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 px-2 py-1 rounded transition-colors hidden sm:inline-flex"
+                    title="Move to tomorrow"
+                  >
+                    → Tomorrow
+                  </button>
+
+                  <button
+                    onClick={() => setEditingTask(task)}
+                    className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+                    title="Edit task"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* Clear, easy remove button */}
+                  <button
+                    onClick={() => handleRemoveTaskFromDay(task.id)}
+                    className="inline-flex items-center gap-1 text-xs text-neutral-400 hover:text-red-600 hover:bg-red-50 px-2 py-1 rounded transition-colors"
+                    title="Remove from today"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Remove</span>
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+
+          {/* Planned Habits Row for Today */}
+          {plannedHabits.length > 0 && (
+            <div className="p-4 sm:p-5 bg-[#fafafa]/50 border-t border-[#ebebeb] space-y-2.5">
+              <div className="text-xs font-semibold text-neutral-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Flame className="w-3.5 h-3.5 text-neutral-900" />
+                <span>Habits for today</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {plannedHabits.map((habit) => {
+                  const isDone = habit.completedDates.includes(selectedDate);
+                  return (
+                    <div
+                      key={habit.id}
+                      className="p-3 bg-white rounded-lg border border-[#ebebeb] flex items-center justify-between gap-3 shadow-2xs"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <button
+                          onClick={() => storage.toggleHabitDate(habit.id, selectedDate)}
+                          className="flex-shrink-0"
+                        >
+                          {isDone ? (
+                            <CheckCircle2 className="w-4 h-4 text-neutral-900 fill-neutral-900/10" />
+                          ) : (
+                            <Circle className="w-4 h-4 text-neutral-300 hover:text-neutral-700" />
+                          )}
+                        </button>
+                        <span
+                          className={`text-sm font-medium truncate ${
+                            isDone ? 'line-through text-neutral-400' : 'text-neutral-900'
+                          }`}
+                        >
+                          {habit.name}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="flex items-center gap-0.5 text-xs font-mono text-neutral-500">
+                          <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500" />
+                          <span>{habit.streak}d</span>
+                        </span>
+                        <button
+                          onClick={() => handleRemoveHabitFromDay(habit.id)}
+                          className="p-1 text-neutral-300 hover:text-red-600 rounded transition-colors"
+                          title="Remove habit from today"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ======================================================== */}
+      {/* 2. PLAN SECTION: ADD, DRAG, & CUSTOMIZE CHANGES */}
+      {/* ======================================================== */}
+      <section className="space-y-5 pt-4 border-t border-[#ebebeb]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-neutral-900" />
+            <h2 className="text-lg font-semibold text-neutral-900 tracking-tight">
+              Plan
+            </h2>
+          </div>
+          <span className="text-xs text-neutral-400">
+            Add or drag tasks into your day
+          </span>
+        </div>
+
+        {/* Quick Add Focus Task Form */}
+        <form onSubmit={handleAddTaskToDay} className="flex gap-2">
+          <input
+            type="text"
+            value={taskInput}
+            onChange={(e) => setTaskInput(e.target.value)}
+            placeholder="Plan a new task for today..."
+            className="flex-1 px-3.5 py-2 text-sm bg-white border border-[#ebebeb] rounded-lg focus:outline-none focus:border-neutral-900 transition-colors shadow-2xs"
+          />
+          <button
+            type="submit"
+            disabled={!taskInput.trim()}
+            className="px-4 py-2 bg-neutral-900 text-white text-xs font-medium rounded-lg hover:bg-neutral-800 disabled:opacity-40 transition-colors inline-flex items-center gap-1.5 shadow-subtle"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add</span>
+          </button>
+        </form>
+
+        {/* Droppable Drop Zone & Available Pools */}
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -239,256 +384,102 @@ export const TodayPage: React.FC<TodayPageProps> = ({
           }}
           onDragLeave={() => setIsDropOver(false)}
           onDrop={handleDropOnDay}
-          className={`grid grid-cols-1 md:grid-cols-2 gap-6 p-1 rounded-xl transition-all ${
-            isDropOver ? 'ring-2 ring-primary/40 bg-blue-50/20' : ''
+          className={`bg-white rounded-xl border p-5 shadow-subtle space-y-4 transition-all ${
+            isDropOver ? 'border-neutral-900 ring-2 ring-neutral-900/10 bg-neutral-50/50' : 'border-[#ebebeb]'
           }`}
         >
-          {/* Card A: Planned Tasks for the Day */}
-          <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle p-5 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between pb-3 border-b border-[#ebebeb] mb-3">
-                <div className="flex items-center gap-2">
-                  <CheckSquare className="w-4 h-4 text-primary" />
-                  <h2 className="text-sm font-semibold text-neutral-900">
-                    Planned Tasks
-                  </h2>
-                </div>
-                <span className="text-xs font-mono text-neutral-400">
-                  {completedPlannedTasks}/{plannedTasks.length}
-                </span>
+          <div className="flex items-center justify-between text-xs text-neutral-500 pb-2 border-b border-[#ebebeb]">
+            <span className="font-semibold text-neutral-900 flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-neutral-900" />
+              <span>Available Tasks & Habits to Drag into Today</span>
+            </span>
+            <span className="text-[11px] font-mono text-neutral-400">
+              Drag or click + to add
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Available Tasks */}
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-neutral-500 flex items-center justify-between">
+                <span>Tasks ({availableTasks.length})</span>
               </div>
 
-              {plannedTasks.length === 0 ? (
-                <div className="py-10 text-center text-xs text-neutral-400 border border-dashed border-[#ebebeb] rounded-lg">
-                  No tasks planned for this day.
+              {availableTasks.length === 0 ? (
+                <div className="py-6 text-center text-xs text-neutral-400 border border-dashed border-[#ebebeb] rounded-lg">
+                  All active tasks are planned.
                 </div>
               ) : (
-                <ul className="divide-y divide-[#ebebeb]/70">
-                  {plannedTasks.map((task) => (
-                    <li
+                <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                  {availableTasks.map((task) => (
+                    <div
                       key={task.id}
                       draggable
                       onDragStart={(e) => handleDragStart(e, 'task', task.id)}
-                      className="py-2.5 flex items-center justify-between gap-3 group hover:bg-[#fafafa]/80 -mx-2 px-2 rounded-md transition-colors"
+                      className="p-2 text-xs bg-[#fafafa] hover:bg-neutral-100 border border-[#ebebeb] rounded-md flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing transition-colors"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <GripVertical className="w-3.5 h-3.5 text-neutral-300 group-hover:text-neutral-500 cursor-grab flex-shrink-0" />
-                        <button
-                          onClick={() => storage.toggleTask(task.id)}
-                          className="flex-shrink-0"
-                        >
-                          {task.completed ? (
-                            <CheckCircle2 className="w-4 h-4 text-primary fill-primary/10" />
-                          ) : (
-                            <Circle className="w-4 h-4 text-neutral-300 hover:text-neutral-500" />
-                          )}
-                        </button>
-                        <span
-                          className={`text-xs font-medium truncate ${
-                            task.completed
-                              ? 'line-through text-neutral-400'
-                              : 'text-neutral-900'
-                          }`}
-                        >
-                          {task.title}
-                        </span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <GripVertical className="w-3 h-3 text-neutral-400 flex-shrink-0" />
+                        <span className="truncate text-neutral-800">{task.title}</span>
                       </div>
-
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {task.priority === 'high' && (
-                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-red-50 text-red-600 font-medium border border-red-200/40">
-                            High
-                          </span>
-                        )}
-
-                        <button
-                          onClick={() => handleMoveToTomorrow(task.id)}
-                          className="text-[10px] text-neutral-500 hover:text-neutral-900 hover:bg-[#ebebeb] px-1.5 py-0.5 rounded transition-colors"
-                          title="Move to tomorrow"
-                        >
-                          → Tomorrow
-                        </button>
-
-                        <button
-                          onClick={() => setEditingTask(task)}
-                          className="p-1 text-neutral-300 hover:text-neutral-900 rounded transition-colors"
-                          title="Edit task"
-                        >
-                          <Edit2 className="w-3 h-3" />
-                        </button>
-
-                        <button
-                          onClick={() => storage.removeTaskFromDate(selectedDate, task.id)}
-                          className="p-1 text-neutral-300 hover:text-red-500 rounded transition-colors"
-                          title="Remove from this day"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </li>
+                      <button
+                        onClick={() => storage.addTaskToDate(selectedDate, task.id)}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-neutral-900 hover:bg-neutral-200/70 rounded transition-colors"
+                        title="Add to today"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Add</span>
+                      </button>
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
             </div>
-          </div>
 
-          {/* Card B: Planned Habits for the Day */}
-          <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle p-5 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between pb-3 border-b border-[#ebebeb] mb-3">
-                <div className="flex items-center gap-2">
-                  <Flame className="w-4 h-4 text-orange-500" />
-                  <h2 className="text-sm font-semibold text-neutral-900">
-                    Planned Habits
-                  </h2>
-                </div>
-                <span className="text-xs font-mono text-neutral-400">
-                  {habitsDoneOnDate}/{plannedHabits.length}
-                </span>
+            {/* Available Habits */}
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-neutral-500 flex items-center justify-between">
+                <span>Habits ({availableHabits.length})</span>
               </div>
 
-              {plannedHabits.length === 0 ? (
-                <div className="py-10 text-center text-xs text-neutral-400 border border-dashed border-[#ebebeb] rounded-lg">
-                  No habits planned for this day.
+              {availableHabits.length === 0 ? (
+                <div className="py-6 text-center text-xs text-neutral-400 border border-dashed border-[#ebebeb] rounded-lg">
+                  All habits are planned for this day.
                 </div>
               ) : (
-                <ul className="divide-y divide-[#ebebeb]/70">
-                  {plannedHabits.map((habit) => {
-                    const isDone = habit.completedDates.includes(selectedDate);
-                    return (
-                      <li
-                        key={habit.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, 'habit', habit.id)}
-                        className="py-2.5 flex items-center justify-between gap-3 group hover:bg-[#fafafa]/80 -mx-2 px-2 rounded-md transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <GripVertical className="w-3.5 h-3.5 text-neutral-300 group-hover:text-neutral-500 cursor-grab flex-shrink-0" />
-                          <button
-                            onClick={() => storage.toggleHabitDate(habit.id, selectedDate)}
-                            className="flex-shrink-0"
-                          >
-                            {isDone ? (
-                              <CheckCircle2 className="w-4 h-4 text-primary fill-primary/10" />
-                            ) : (
-                              <Circle className="w-4 h-4 text-neutral-300 hover:text-neutral-500" />
-                            )}
-                          </button>
-                          <span
-                            className={`text-xs font-medium truncate ${
-                              isDone ? 'line-through text-neutral-400' : 'text-neutral-900'
-                            }`}
-                          >
-                            {habit.name}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="flex items-center gap-0.5 text-[11px] font-mono text-neutral-500">
-                            <Flame className={`w-3.5 h-3.5 ${habit.streak > 0 ? 'text-orange-500 fill-orange-500' : 'text-neutral-300'}`} />
-                            <span>{habit.streak}d</span>
-                          </span>
-                          <button
-                            onClick={() => storage.removeHabitFromDate(selectedDate, habit.id)}
-                            className="p-1 text-neutral-300 hover:text-red-500 rounded transition-colors"
-                            title="Remove habit from this day"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Available Tray: Drag items into today */}
-        {(availableTasks.length > 0 || availableHabits.length > 0) && (
-          <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle p-4">
-            <div className="flex items-center gap-2 text-xs font-semibold text-neutral-800 mb-3">
-              <Layers className="w-3.5 h-3.5 text-neutral-400" />
-              <span>Available to drag or add to this day</span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Available Tasks */}
-              {availableTasks.length > 0 && (
-                <div className="space-y-1.5">
-                  <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider flex items-center gap-1">
-                    <CheckSquare className="w-3 h-3" />
-                    <span>Tasks ({availableTasks.length})</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
-                    {availableTasks.slice(0, 10).map((task) => (
-                      <div
-                        key={task.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, 'task', task.id)}
-                        className="p-1.5 px-2 text-xs bg-[#fafafa] hover:bg-neutral-100 border border-[#ebebeb] rounded-md flex items-center gap-2 cursor-grab active:cursor-grabbing transition-colors"
-                      >
-                        <GripVertical className="w-3 h-3 text-neutral-400" />
-                        <span className="truncate max-w-[160px] text-neutral-800">{task.title}</span>
-                        <button
-                          onClick={() => storage.addTaskToDate(selectedDate, task.id)}
-                          className="p-0.5 text-primary hover:bg-[#ebf5ff] rounded"
-                          title="Add to day"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
+                <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                  {availableHabits.map((habit) => (
+                    <div
+                      key={habit.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, 'habit', habit.id)}
+                      className="p-2 text-xs bg-[#fafafa] hover:bg-neutral-100 border border-[#ebebeb] rounded-md flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing transition-colors"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <GripVertical className="w-3 h-3 text-neutral-400 flex-shrink-0" />
+                        <span className="truncate text-neutral-800">{habit.name}</span>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Available Habits */}
-              {availableHabits.length > 0 && (
-                <div className="space-y-1.5">
-                  <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider flex items-center gap-1">
-                    <Activity className="w-3 h-3" />
-                    <span>Habits ({availableHabits.length})</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
-                    {availableHabits.map((habit) => (
-                      <div
-                        key={habit.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, 'habit', habit.id)}
-                        className="p-1.5 px-2 text-xs bg-[#fafafa] hover:bg-neutral-100 border border-[#ebebeb] rounded-md flex items-center gap-2 cursor-grab active:cursor-grabbing transition-colors"
+                      <button
+                        onClick={() => storage.addHabitToDate(selectedDate, habit.id)}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-neutral-900 hover:bg-neutral-200/70 rounded transition-colors"
+                        title="Add habit to today"
                       >
-                        <GripVertical className="w-3 h-3 text-neutral-400" />
-                        <span className="truncate max-w-[160px] text-neutral-800">{habit.name}</span>
-                        <button
-                          onClick={() => storage.addHabitToDate(selectedDate, habit.id)}
-                          className="p-0.5 text-primary hover:bg-[#ebf5ff] rounded"
-                          title="Add habit to day"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                        <Plus className="w-3 h-3" />
+                        <span>Add</span>
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
           </div>
-        )}
-      </div>
-
-      {/* 4. Large Full-Width Calendar Underneath */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-neutral-900 tracking-tight">
-            Schedule & Overview
-          </h2>
-          <span className="text-xs text-neutral-400">
-            Click any day to customize its plan
-          </span>
         </div>
+      </section>
 
+      {/* ======================================================== */}
+      {/* 3. CALENDAR SECTION: LARGE FULL-WIDTH CALENDAR */}
+      {/* ======================================================== */}
+      <section className="space-y-4 pt-4 border-t border-[#ebebeb]">
         <CalendarView
           selectedDate={selectedDate}
           onSelectDate={setSelectedDate}
@@ -498,7 +489,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
           onDropTaskOnDate={handleDropOnCalendarDate}
           onDropHabitOnDate={handleDropHabitOnCalendarDate}
         />
-      </div>
+      </section>
 
       {/* Task Edit Modal */}
       <TaskEditModal
