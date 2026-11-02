@@ -1,27 +1,30 @@
 import React from 'react';
 import { Page } from '../types';
-import { CheckSquare, Inbox, Activity, Home, CheckCircle2 } from 'lucide-react';
+import { CheckSquare, Inbox, Activity, Sun, CheckCircle2 } from 'lucide-react';
 
 interface NavigationProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
+  todayTasksCount: number;
   pendingTasksCount: number;
-  inboxCount: number;
+  inboxTasksCount: number;
   habitsTodayDone: { done: number; total: number };
 }
 
 export const Navigation: React.FC<NavigationProps> = ({
   currentPage,
   onNavigate,
+  todayTasksCount,
   pendingTasksCount,
-  inboxCount,
+  inboxTasksCount,
   habitsTodayDone,
 }) => {
   const tabs = [
     {
-      id: 'home' as Page,
-      label: 'Home',
-      icon: Home,
+      id: 'today' as Page,
+      label: 'Today',
+      icon: Sun,
+      badge: todayTasksCount > 0 ? todayTasksCount : undefined,
     },
     {
       id: 'tasks' as Page,
@@ -33,7 +36,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       id: 'inbox' as Page,
       label: 'Inbox',
       icon: Inbox,
-      badge: inboxCount > 0 ? inboxCount : undefined,
+      badge: inboxTasksCount > 0 ? inboxTasksCount : undefined,
     },
     {
       id: 'tracker' as Page,
@@ -51,7 +54,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Brand */}
         <div 
-          onClick={() => onNavigate('home')}
+          onClick={() => onNavigate('today')}
           className="flex items-center gap-2.5 cursor-pointer group"
         >
           <div className="w-8 h-8 rounded-lg bg-neutral-900 text-white flex items-center justify-center font-semibold text-sm shadow-subtle group-hover:scale-105 transition-transform duration-150">

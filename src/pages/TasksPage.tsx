@@ -1,36 +1,43 @@
 import React, { useState } from 'react';
-import { Task, Priority } from '../types';
-import { storage } from '../services/storage';
+import { Task, InboxGroup, Priority } from '../types';
+import { storage, getTodayStr } from '../services/storage';
 import { 
   Plus, 
   Trash2, 
   CheckCircle2, 
   Circle, 
   Calendar, 
-  Tag
+  Tag,
+  Sun
 } from 'lucide-react';
 
 interface TasksPageProps {
   tasks: Task[];
+  inboxes: InboxGroup[];
 }
 
-export const TasksPage: React.FC<TasksPageProps> = ({ tasks }) => {
+export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'high'>('all');
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('General');
+  const [inboxId, setInboxId] = useState(inboxes[0]?.id || 'inbox-general');
   const [priority, setPriority] = useState<Priority>('medium');
   const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
   const [isAdding, setIsAdding] = useState(false);
+
+  const todayStr = getTodayStr();
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
+    const selectedInbox = inboxes.find((i) => i.id === inboxId);
+
     storage.addTask({
       title: title.trim(),
       completed: false,
       priority,
-      category: category.trim() || 'General',
+      inboxId,
+      category: selectedInbox?.name || 'General',
       dueDate: dueDate || undefined,
     });
 
@@ -88,6 +95,21 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks }) => {
           />
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1.5">
+              <span className="text-xs text-neutral-500">Inbox:</span>
+              <select
+                value={inboxId}
+                onChange={(e) => setInboxId(e.target.value)}
+                className="text-xs bg-[#fafafa] border border-[#ebebeb] rounded px-2 py-1 focus:outline-none"
+              >
+                {inboxes.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1.5">
               <span className="text-xs text-neutral-500">Priority:</span>
               <select
                 value={priority}
@@ -98,17 +120,6 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks }) => {
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
               </select>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-neutral-500">Category:</span>
-              <input
-                type="text"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                placeholder="Category"
-                className="text-xs bg-[#fafafa] border border-[#ebebeb] rounded px-2 py-1 w-28 focus:outline-none"
-              />
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -180,76 +191,91 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks }) => {
           </div>
         ) : (
           <ul className="divide-y divide-[#ebebeb]/70">
-            {filteredTasks.map((task) => (
-              <li
-                key={task.id}
-                className="p-3.5 sm:px-5 flex items-center justify-between gap-3 hover:bg-[#fafafa]/80 transition-colors group"
-              >
-                {/* Left: Checkbox + Title */}
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <button
-                    onClick={() => storage.toggleTask(task.id)}
-                    className="flex-shrink-0 transition-transform active:scale-95"
-                  >
-                    {task.completed ? (
-                      <CheckCircle2 className="w-4 h-4 text-primary fill-primary/10" />
-                    ) : (
-                      <Circle className="w-4 h-4 text-neutral-300 group-hover:text-neutral-500" />
-                    )}
-                  </button>
-
-                  <div className="min-w-0">
-                    <p
-                      className={`text-xs font-medium truncate ${
-                        task.completed
-                          ? 'line-through text-neutral-400'
-                          : 'text-neutral-900'
-                      }`}
+            {filteredTasks.map((task) => {
+              const inboxInfo = inboxes.find((i) => i.id === task.inboxId);
+              return (
+                <li
+                  key={task.id}
+                  className="p-3.5 sm:px-5 flex items-center justify-between gap-3 hover:bg-[#fafafa]/80 transition-colors group"
+                >
+                  {/* Left: Checkbox + Title */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <button
+                      onClick={() => storage.toggleTask(task.id)}
+                      className="flex-shrink-0 transition-transform active:scale-95"
                     >
-                      {task.title}
-                    </p>
+                      {task.completed ? (
+                        <CheckCircle2 className="w-4 h-4 text-primary fill-primary/10" />
+                      ) : (
+                        <Circle className="w-4 h-4 text-neutral-300 group-hover:text-neutral-500" />
+                      )}
+                    </button>
+
+                    <div className="min-w-0">
+                      <p
+                        className={`text-xs font-medium truncate ${
+                          task.completed
+                            ? 'line-through text-neutral-400'
+                            : 'text-neutral-900'
+                        }`}
+                      >
+                        {task.title}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                {/* Right: Badges & Actions */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {/* Priority Tag */}
-                  {task.priority === 'high' && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-600 font-medium border border-red-200/50">
-                      High
-                    </span>
-                  )}
-                  {task.priority === 'medium' && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium border border-amber-200/50">
-                      Med
-                    </span>
-                  )}
+                  {/* Right: Badges & Actions */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Priority Tag */}
+                    {task.priority === 'high' && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-600 font-medium border border-red-200/50">
+                        High
+                      </span>
+                    )}
+                    {task.priority === 'medium' && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium border border-amber-200/50">
+                        Med
+                      </span>
+                    )}
 
-                  {/* Category Tag */}
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-[#fafafa] border border-[#ebebeb] px-2 py-0.5 rounded">
-                    <Tag className="w-2.5 h-2.5" />
-                    {task.category}
-                  </span>
+                    {/* Inbox / Category Tag */}
+                    {inboxInfo && (
+                      <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-[#fafafa] border border-[#ebebeb] px-2 py-0.5 rounded">
+                        <Tag className="w-2.5 h-2.5" />
+                        {inboxInfo.name}
+                      </span>
+                    )}
 
-                  {/* Due Date */}
-                  {task.dueDate && (
-                    <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-neutral-500 font-mono">
-                      <Calendar className="w-3 h-3" />
-                      {task.dueDate}
-                    </span>
-                  )}
+                    {/* Due Date */}
+                    {task.dueDate && (
+                      <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-neutral-500 font-mono">
+                        <Calendar className="w-3 h-3" />
+                        {task.dueDate}
+                      </span>
+                    )}
 
-                  {/* Delete button */}
-                  <button
-                    onClick={() => storage.deleteTask(task.id)}
-                    className="p-1 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100"
-                    title="Delete task"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </li>
-            ))}
+                    {/* Quick Schedule for Today */}
+                    <button
+                      onClick={() => storage.addTaskToDate(todayStr, task.id)}
+                      className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-neutral-600 hover:text-primary hover:bg-[#ebf5ff] rounded transition-colors"
+                      title="Schedule for Today"
+                    >
+                      <Sun className="w-3 h-3 text-amber-500" />
+                      <span>Today</span>
+                    </button>
+
+                    {/* Delete button */}
+                    <button
+                      onClick={() => storage.deleteTask(task.id)}
+                      className="p-1 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100"
+                      title="Delete task"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

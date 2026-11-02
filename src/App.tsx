@@ -2,18 +2,34 @@ import { useState } from 'react';
 import { Page } from './types';
 import { useSimpleDoData } from './hooks/useSimpleDoData';
 import { Navigation } from './components/Navigation';
-import { HomePage } from './pages/HomePage';
+import { TodayPage } from './pages/TodayPage';
 import { TasksPage } from './pages/TasksPage';
 import { InboxPage } from './pages/InboxPage';
 import { TrackerPage } from './pages/TrackerPage';
+import { getTodayStr } from './services/storage';
 
 export function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('home');
+  const [currentPage, setCurrentPage] = useState<Page>('today');
   const data = useSimpleDoData();
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayStr();
+  const dayPlan = data.dayPlans[todayStr] || {
+    date: todayStr,
+    plannedTaskIds: [],
+    plannedHabitIds: [],
+  };
+
+  const todayTasksCount = data.tasks.filter(
+    (t) =>
+      !t.completed &&
+      (dayPlan.plannedTaskIds.includes(t.id) ||
+        t.scheduledDate === todayStr ||
+        t.dueDate === todayStr)
+  ).length;
+
   const pendingTasksCount = data.tasks.filter((t) => !t.completed).length;
-  const inboxCount = data.inbox.length;
+  const inboxTasksCount = data.tasks.length;
+
   const habitsTodayDone = {
     done: data.habits.filter((h) => h.completedDates.includes(todayStr)).length,
     total: data.habits.length,
@@ -25,29 +41,28 @@ export function App() {
       <Navigation
         currentPage={currentPage}
         onNavigate={setCurrentPage}
+        todayTasksCount={todayTasksCount}
         pendingTasksCount={pendingTasksCount}
-        inboxCount={inboxCount}
+        inboxTasksCount={inboxTasksCount}
         habitsTodayDone={habitsTodayDone}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8">
-        {currentPage === 'home' && (
-          <HomePage
+        {currentPage === 'today' && (
+          <TodayPage
             tasks={data.tasks}
             habits={data.habits}
-            inboxCount={inboxCount}
             onNavigate={setCurrentPage}
           />
         )}
 
-        {currentPage === 'tasks' && <TasksPage tasks={data.tasks} />}
+        {currentPage === 'tasks' && (
+          <TasksPage tasks={data.tasks} inboxes={data.inboxes} />
+        )}
 
         {currentPage === 'inbox' && (
-          <InboxPage
-            inbox={data.inbox}
-            onNavigateToTasks={() => setCurrentPage('tasks')}
-          />
+          <InboxPage tasks={data.tasks} inboxes={data.inboxes} />
         )}
 
         {currentPage === 'tracker' && <TrackerPage habits={data.habits} />}
@@ -63,10 +78,10 @@ export function App() {
           </div>
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setCurrentPage('home')}
+              onClick={() => setCurrentPage('today')}
               className="hover:text-neutral-900 transition-colors"
             >
-              Home
+              Today
             </button>
             <button
               onClick={() => setCurrentPage('tasks')}
