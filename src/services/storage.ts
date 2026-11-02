@@ -11,6 +11,19 @@ export function getTodayStr(): string {
   return `${year}-${month}-${day}`;
 }
 
+export const PRESET_INBOX_COLORS = [
+  '#0068d6', // Vercel Primary Blue
+  '#0070f3', // Accent Electric Blue
+  '#10b981', // Emerald
+  '#f59e0b', // Amber
+  '#ef4444', // Red / Crimson
+  '#8b5cf6', // Purple
+  '#ec4899', // Pink
+  '#06b6d4', // Cyan
+  '#171717', // Neutral Black
+  '#64748b', // Slate
+];
+
 const defaultInboxes: InboxGroup[] = [
   {
     id: 'inbox-general',
@@ -43,7 +56,7 @@ const defaultTasks: Task[] = [
     title: 'Review today’s key priorities and roadmap',
     completed: false,
     priority: 'high',
-    category: 'Work',
+    category: 'Work & Projects',
     inboxId: 'inbox-work',
     dueDate: today,
     scheduledDate: today,
@@ -54,7 +67,7 @@ const defaultTasks: Task[] = [
     title: 'Check and clear General Inbox items',
     completed: true,
     priority: 'medium',
-    category: 'General',
+    category: 'General Inbox',
     inboxId: 'inbox-general',
     dueDate: today,
     scheduledDate: today,
@@ -65,20 +78,10 @@ const defaultTasks: Task[] = [
     title: 'Plan tomorrow’s deep focus session',
     completed: false,
     priority: 'medium',
-    category: 'Work',
+    category: 'Work & Projects',
     inboxId: 'inbox-work',
     dueDate: today,
     scheduledDate: today,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-4',
-    title: 'Weekly grocery restock',
-    completed: false,
-    priority: 'low',
-    category: 'Personal',
-    inboxId: 'inbox-personal',
-    dueDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
     createdAt: new Date().toISOString(),
   },
 ];
@@ -91,7 +94,7 @@ const defaultHabits: Habit[] = [
     frequency: 'daily',
     completedDates: [today],
     streak: 1,
-    bestStreak: 7,
+    bestStreak: 1,
     createdAt: new Date().toISOString(),
   },
   {
@@ -100,8 +103,8 @@ const defaultHabits: Habit[] = [
     category: 'Productivity',
     frequency: 'daily',
     completedDates: [],
-    streak: 3,
-    bestStreak: 12,
+    streak: 0,
+    bestStreak: 5,
     createdAt: new Date().toISOString(),
   },
   {
@@ -110,8 +113,8 @@ const defaultHabits: Habit[] = [
     category: 'Learning',
     frequency: 'daily',
     completedDates: [today],
-    streak: 4,
-    bestStreak: 10,
+    streak: 1,
+    bestStreak: 4,
     createdAt: new Date().toISOString(),
   },
 ];
@@ -131,48 +134,71 @@ const defaultData: SimpleDoData = {
   dayPlans: defaultDayPlans,
 };
 
+/**
+ * Calculates a habit's streak according to user rules:
+ * - Only days where the habit was DRAGGED IN / SCHEDULED count toward the streak.
+ * - If a habit was not dragged in on a day, that day is ignored and does NOT break the streak.
+ * - If a habit was dragged in and completed, streak increments.
+ * - If a habit was dragged in on a past day and NOT completed, streak breaks.
+ */
+export function calculateCustomHabitStreak(
+  habit: Habit,
+  dayPlans: Record<string, DayPlan>
+): { streak: number; bestStreak: number } {
+  const todayStr = getTodayStr();
+
+  // Find all dates where the habit was planned and is on or before today
+  const plannedDates = Object.keys(dayPlans)
+    .filter((dateStr) => {
+      const plan = dayPlans[dateStr];
+      return plan && plan.plannedHabitIds && plan.plannedHabitIds.includes(habit.id);
+    })
+    .filter((dateStr) => dateStr <= todayStr)
+    .sort() // ascending chronological: ['2026-11-01', '2026-11-02']
+    .reverse(); // descending: newest first
+
+  if (plannedDates.length === 0) {
+    return { streak: 0, bestStreak: habit.bestStreak || 0 };
+  }
+
+  let streak = 0;
+  let isStreakActive = true;
+
+  for (let i = 0; i < plannedDates.length; i++) {
+    const date = plannedDates[i];
+    const isCompleted = habit.completedDates.includes(date);
+
+    if (date === todayStr) {
+      if (isCompleted) {
+        streak++;
+      }
+      // If not completed today, today is still ongoing, so continue checking previous planned days
+      continue;
+    }
+
+    // Past planned day:
+    if (isCompleted && isStreakActive) {
+      streak++;
+    } else {
+      // Past day was planned but NOT completed -> streak ends here
+      isStreakActive = false;
+      break;
+    }
+  }
+
+  const bestStreak = Math.max(habit.bestStreak || 0, streak);
+  return { streak, bestStreak };
+}
+
 export const storage = {
   load(): SimpleDoData {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) {
-        // Check if v1 data exists to migrate
-        const oldRaw = localStorage.getItem('simpledo_data_v1');
-        if (oldRaw) {
-          try {
-            const oldData = JSON.parse(oldRaw);
-            const migratedTasks: Task[] = Array.isArray(oldData.tasks) ? oldData.tasks : [];
-            // Migrate old inbox strings to tasks under default inbox
-            if (Array.isArray(oldData.inbox)) {
-              oldData.inbox.forEach((item: { id: string; content: string; createdAt?: string }) => {
-                migratedTasks.push({
-                  id: `task-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-                  title: item.content,
-                  completed: false,
-                  priority: 'medium',
-                  inboxId: 'inbox-general',
-                  category: 'Inbox',
-                  createdAt: item.createdAt || new Date().toISOString(),
-                });
-              });
-            }
-            const migrated: SimpleDoData = {
-              tasks: migratedTasks.length ? migratedTasks : defaultTasks,
-              inboxes: defaultInboxes,
-              habits: Array.isArray(oldData.habits) ? oldData.habits : defaultHabits,
-              dayPlans: defaultDayPlans,
-            };
-            this.save(migrated);
-            return migrated;
-          } catch {
-            // fallback
-          }
-        }
         this.save(defaultData);
         return defaultData;
       }
       const parsed = JSON.parse(raw);
-      // Ensure inboxes exist
       if (!parsed.inboxes || parsed.inboxes.length === 0) {
         parsed.inboxes = defaultInboxes;
       }
@@ -204,7 +230,6 @@ export const storage = {
     };
     data.tasks.unshift(newTask);
 
-    // If scheduled for a specific date, add to that date's dayPlan
     if (newTask.scheduledDate) {
       if (!data.dayPlans[newTask.scheduledDate]) {
         data.dayPlans[newTask.scheduledDate] = {
@@ -224,7 +249,33 @@ export const storage = {
 
   updateTask(id: string, updates: Partial<Task>) {
     const data = this.load();
+    const oldTask = data.tasks.find((t) => t.id === id);
+
     data.tasks = data.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t));
+
+    // Handle scheduledDate changes if scheduledDate was updated
+    if (updates.scheduledDate !== undefined && oldTask?.scheduledDate !== updates.scheduledDate) {
+      // Remove from old scheduled date dayPlan
+      if (oldTask?.scheduledDate && data.dayPlans[oldTask.scheduledDate]) {
+        data.dayPlans[oldTask.scheduledDate].plannedTaskIds = data.dayPlans[
+          oldTask.scheduledDate
+        ].plannedTaskIds.filter((tId) => tId !== id);
+      }
+      // Add to new scheduled date dayPlan
+      if (updates.scheduledDate) {
+        if (!data.dayPlans[updates.scheduledDate]) {
+          data.dayPlans[updates.scheduledDate] = {
+            date: updates.scheduledDate,
+            plannedTaskIds: [],
+            plannedHabitIds: [],
+          };
+        }
+        if (!data.dayPlans[updates.scheduledDate].plannedTaskIds.includes(id)) {
+          data.dayPlans[updates.scheduledDate].plannedTaskIds.push(id);
+        }
+      }
+    }
+
     this.save(data);
   },
 
@@ -239,7 +290,6 @@ export const storage = {
   deleteTask(id: string) {
     const data = this.load();
     data.tasks = data.tasks.filter((t) => t.id !== id);
-    // Remove from all day plans
     Object.keys(data.dayPlans).forEach((date) => {
       data.dayPlans[date].plannedTaskIds = data.dayPlans[date].plannedTaskIds.filter(
         (tId) => tId !== id
@@ -263,9 +313,14 @@ export const storage = {
     return newInbox;
   },
 
+  updateInbox(id: string, updates: Partial<InboxGroup>) {
+    const data = this.load();
+    data.inboxes = data.inboxes.map((i) => (i.id === id ? { ...i, ...updates } : i));
+    this.save(data);
+  },
+
   deleteInbox(id: string) {
     const data = this.load();
-    // Reassign tasks to general inbox
     data.tasks = data.tasks.map((t) =>
       t.inboxId === id ? { ...t, inboxId: 'inbox-general' } : t
     );
@@ -277,12 +332,10 @@ export const storage = {
   getDayPlan(date: string): DayPlan {
     const data = this.load();
     if (!data.dayPlans[date]) {
-      // Auto populate with daily habits if not set
-      const dailyHabits = data.habits.map((h) => h.id);
       return {
         date,
         plannedTaskIds: [],
-        plannedHabitIds: dailyHabits,
+        plannedHabitIds: [],
       };
     }
     return data.dayPlans[date];
@@ -294,13 +347,12 @@ export const storage = {
       data.dayPlans[date] = {
         date,
         plannedTaskIds: [],
-        plannedHabitIds: data.habits.map((h) => h.id),
+        plannedHabitIds: [],
       };
     }
     if (!data.dayPlans[date].plannedTaskIds.includes(taskId)) {
       data.dayPlans[date].plannedTaskIds.push(taskId);
     }
-    // Update task's scheduledDate
     data.tasks = data.tasks.map((t) =>
       t.id === taskId ? { ...t, scheduledDate: date } : t
     );
@@ -332,6 +384,16 @@ export const storage = {
     if (!data.dayPlans[date].plannedHabitIds.includes(habitId)) {
       data.dayPlans[date].plannedHabitIds.push(habitId);
     }
+
+    // Recompute streak for this habit
+    data.habits = data.habits.map((h) => {
+      if (h.id === habitId) {
+        const { streak, bestStreak } = calculateCustomHabitStreak(h, data.dayPlans);
+        return { ...h, streak, bestStreak };
+      }
+      return h;
+    });
+
     this.save(data);
   },
 
@@ -342,6 +404,16 @@ export const storage = {
         (id) => id !== habitId
       );
     }
+
+    // Recompute streak for this habit
+    data.habits = data.habits.map((h) => {
+      if (h.id === habitId) {
+        const { streak, bestStreak } = calculateCustomHabitStreak(h, data.dayPlans);
+        return { ...h, streak, bestStreak };
+      }
+      return h;
+    });
+
     this.save(data);
   },
 
@@ -356,7 +428,7 @@ export const storage = {
       data.dayPlans[targetDate] = {
         date: targetDate,
         plannedTaskIds: [],
-        plannedHabitIds: data.habits.map((h) => h.id),
+        plannedHabitIds: [],
       };
     }
     if (!data.dayPlans[targetDate].plannedTaskIds.includes(taskId)) {
@@ -381,7 +453,7 @@ export const storage = {
     };
     data.habits.push(newHabit);
 
-    // Also add to today's day plan
+    // Auto-add to today's plan
     const todayStr = getTodayStr();
     if (!data.dayPlans[todayStr]) {
       data.dayPlans[todayStr] = {
@@ -405,12 +477,11 @@ export const storage = {
         ? habit.completedDates.filter((d) => d !== dateStr)
         : [...habit.completedDates, dateStr];
 
-      const streak = calculateStreak(newDates);
-      const bestStreak = Math.max(habit.bestStreak, streak);
+      const updatedHabit = { ...habit, completedDates: newDates };
+      const { streak, bestStreak } = calculateCustomHabitStreak(updatedHabit, data.dayPlans);
 
       return {
-        ...habit,
-        completedDates: newDates,
+        ...updatedHabit,
         streak,
         bestStreak,
       };
@@ -421,7 +492,6 @@ export const storage = {
   deleteHabit(id: string) {
     const data = this.load();
     data.habits = data.habits.filter((h) => h.id !== id);
-    // Remove from day plans
     Object.keys(data.dayPlans).forEach((date) => {
       data.dayPlans[date].plannedHabitIds = data.dayPlans[date].plannedHabitIds.filter(
         (hId) => hId !== id
@@ -430,29 +500,3 @@ export const storage = {
     this.save(data);
   },
 };
-
-function calculateStreak(dates: string[]): number {
-  if (!dates || dates.length === 0) return 0;
-  const sorted = [...dates].sort().reverse();
-  const today = getTodayStr();
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-
-  if (!sorted.includes(today) && !sorted.includes(yesterday)) {
-    return 0;
-  }
-
-  let currentStreak = 0;
-  let checkDate = sorted.includes(today) ? new Date() : new Date(Date.now() - 86400000);
-
-  while (true) {
-    const dateStr = checkDate.toISOString().split('T')[0];
-    if (sorted.includes(dateStr)) {
-      currentStreak++;
-      checkDate.setDate(checkDate.getDate() - 1);
-    } else {
-      break;
-    }
-  }
-
-  return currentStreak;
-}

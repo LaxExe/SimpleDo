@@ -9,6 +9,7 @@ interface CalendarViewProps {
   tasks: Task[];
   habits: Habit[];
   onDropTaskOnDate?: (taskId: string, targetDate: string) => void;
+  onDropHabitOnDate?: (habitId: string, targetDate: string) => void;
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
@@ -16,6 +17,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onSelectDate,
   tasks,
   onDropTaskOnDate,
+  onDropHabitOnDate,
 }) => {
   const [currentMonthDate, setCurrentMonthDate] = useState(() => {
     const parts = selectedDate.split('-');
@@ -27,11 +29,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const year = currentMonthDate.getFullYear();
   const month = currentMonthDate.getMonth();
 
-  // First day of month & total days
   const firstDayOfWeek = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  // Month name
   const monthName = currentMonthDate.toLocaleDateString('en-US', {
     month: 'long',
     year: 'numeric',
@@ -66,7 +66,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     }
   });
 
-  // Calendar cells: empty padding cells for starting day + actual days
   const cells = [];
   for (let i = 0; i < firstDayOfWeek; i++) {
     cells.push(null);
@@ -150,8 +149,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 e.preventDefault();
                 setDragOverDate(null);
                 const taskId = e.dataTransfer.getData('text/plain-task');
+                const habitId = e.dataTransfer.getData('text/plain-habit');
                 if (taskId && onDropTaskOnDate) {
                   onDropTaskOnDate(taskId, cell.dateStr);
+                } else if (habitId && onDropHabitOnDate) {
+                  onDropHabitOnDate(habitId, cell.dateStr);
                 }
               }}
               className={`h-9 sm:h-11 rounded-md flex flex-col items-center justify-center relative cursor-pointer transition-all select-none ${
@@ -204,7 +206,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           <span>Completed</span>
         </span>
         <span className="text-[10px] text-neutral-400 italic">
-          Drag tasks onto dates to reschedule
+          Drag tasks or habits to date
         </span>
       </div>
     </div>

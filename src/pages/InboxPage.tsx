@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Task, InboxGroup, Priority } from '../types';
-import { storage, getTodayStr } from '../services/storage';
+import { storage, getTodayStr, PRESET_INBOX_COLORS } from '../services/storage';
+import { TaskEditModal } from '../components/TaskEditModal';
 import { 
   Inbox, 
   Plus, 
@@ -9,7 +10,9 @@ import {
   Circle, 
   FolderPlus,
   Layers,
-  Sun
+  Sun,
+  Edit2,
+  Check
 } from 'lucide-react';
 
 interface InboxPageProps {
@@ -22,9 +25,21 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskPriority, setNewTaskPriority] = useState<Priority>('medium');
   const [newTaskDueDate, setNewTaskDueDate] = useState('');
+  
+  // New Inbox creation
   const [isCreatingInbox, setIsCreatingInbox] = useState(false);
   const [newInboxName, setNewInboxName] = useState('');
   const [newInboxDesc, setNewInboxDesc] = useState('');
+  const [newInboxColor, setNewInboxColor] = useState(PRESET_INBOX_COLORS[0]);
+
+  // Edit Inbox modal/state
+  const [editingInbox, setEditingInbox] = useState<InboxGroup | null>(null);
+  const [editInboxName, setEditInboxName] = useState('');
+  const [editInboxDesc, setEditInboxDesc] = useState('');
+  const [editInboxColor, setEditInboxColor] = useState('');
+
+  // Task editing
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const todayStr = getTodayStr();
 
@@ -60,14 +75,32 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
     e.preventDefault();
     if (!newInboxName.trim()) return;
 
-    const colors = ['#0068d6', '#0070f3', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-
-    const created = storage.addInbox(newInboxName, newInboxDesc, randomColor);
+    const created = storage.addInbox(newInboxName, newInboxDesc, newInboxColor);
     setSelectedInboxId(created.id);
     setNewInboxName('');
     setNewInboxDesc('');
     setIsCreatingInbox(false);
+  };
+
+  const startEditInbox = (inbox: InboxGroup, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingInbox(inbox);
+    setEditInboxName(inbox.name);
+    setEditInboxDesc(inbox.description || '');
+    setEditInboxColor(inbox.color || PRESET_INBOX_COLORS[0]);
+  };
+
+  const handleSaveInboxEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingInbox || !editInboxName.trim()) return;
+
+    storage.updateInbox(editingInbox.id, {
+      name: editInboxName.trim(),
+      description: editInboxDesc.trim(),
+      color: editInboxColor,
+    });
+
+    setEditingInbox(null);
   };
 
   const handleScheduleForToday = (taskId: string) => {
@@ -83,7 +116,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
             Inbox Hub
           </h1>
           <p className="text-xs text-neutral-500 mt-1">
-            Central repository to manage inboxes and organize tasks before scheduling.
+            Manage your inboxes, customize colors, and organize tasks.
           </p>
         </div>
         <button
@@ -95,13 +128,13 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
         </button>
       </div>
 
-      {/* New Inbox Creation Modal/Form */}
+      {/* New Inbox Creation Form */}
       {isCreatingInbox && (
         <form
           onSubmit={handleCreateInbox}
-          className="bg-white p-4 rounded-lg border border-[#ebebeb] shadow-subtle space-y-3"
+          className="bg-white p-5 rounded-lg border border-[#ebebeb] shadow-subtle space-y-4 animate-scaleIn"
         >
-          <div className="text-xs font-semibold text-neutral-900">Create New Inbox Category</div>
+          <div className="text-xs font-semibold text-neutral-900">Create New Inbox</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
               type="text"
@@ -119,7 +152,37 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
               className="px-3 py-2 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
             />
           </div>
-          <div className="flex justify-end gap-2">
+
+          {/* Color Customizer Swatches */}
+          <div>
+            <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+              Choose Color Theme
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              {PRESET_INBOX_COLORS.map((color) => (
+                <button
+                  type="button"
+                  key={color}
+                  onClick={() => setNewInboxColor(color)}
+                  className={`w-6 h-6 rounded-full flex items-center justify-center transition-transform hover:scale-110 ${
+                    newInboxColor === color ? 'ring-2 ring-offset-2 ring-neutral-900 scale-105' : ''
+                  }`}
+                  style={{ backgroundColor: color }}
+                >
+                  {newInboxColor === color && <Check className="w-3 h-3 text-white stroke-[3]" />}
+                </button>
+              ))}
+              <input
+                type="color"
+                value={newInboxColor}
+                onChange={(e) => setNewInboxColor(e.target.value)}
+                className="w-7 h-7 rounded border border-[#ebebeb] cursor-pointer ml-1 p-0.5 bg-white"
+                title="Custom Hex Color"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-[#ebebeb]">
             <button
               type="button"
               onClick={() => setIsCreatingInbox(false)}
@@ -130,12 +193,97 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
             <button
               type="submit"
               disabled={!newInboxName.trim()}
-              className="px-3.5 py-1 text-xs font-medium text-white bg-primary hover:bg-primary-hover rounded-md transition-colors disabled:opacity-40"
+              className="px-4 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-md transition-colors disabled:opacity-40 shadow-subtle"
             >
               Save Inbox
             </button>
           </div>
         </form>
+      )}
+
+      {/* Edit Inbox Modal */}
+      {editingInbox && (
+        <div className="fixed inset-0 z-50 bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <form
+            onSubmit={handleSaveInboxEdit}
+            className="bg-white rounded-xl border border-[#ebebeb] shadow-modal max-w-md w-full p-5 space-y-4"
+          >
+            <div className="text-sm font-semibold text-neutral-900">
+              Customize Inbox: {editingInbox.name}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">
+                Inbox Name
+              </label>
+              <input
+                type="text"
+                value={editInboxName}
+                onChange={(e) => setEditInboxName(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">
+                Description
+              </label>
+              <input
+                type="text"
+                value={editInboxDesc}
+                onChange={(e) => setEditInboxDesc(e.target.value)}
+                placeholder="Optional description"
+                className="w-full px-3 py-2 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
+              />
+            </div>
+
+            {/* Color Customizer */}
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                Customize Color
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                {PRESET_INBOX_COLORS.map((color) => (
+                  <button
+                    type="button"
+                    key={color}
+                    onClick={() => setEditInboxColor(color)}
+                    className={`w-6 h-6 rounded-full flex items-center justify-center transition-transform hover:scale-110 ${
+                      editInboxColor === color ? 'ring-2 ring-offset-2 ring-neutral-900 scale-105' : ''
+                    }`}
+                    style={{ backgroundColor: color }}
+                  >
+                    {editInboxColor === color && <Check className="w-3 h-3 text-white stroke-[3]" />}
+                  </button>
+                ))}
+                <input
+                  type="color"
+                  value={editInboxColor}
+                  onChange={(e) => setEditInboxColor(e.target.value)}
+                  className="w-7 h-7 rounded border border-[#ebebeb] cursor-pointer ml-1 p-0.5 bg-white"
+                  title="Custom Hex Color"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-[#ebebeb]">
+              <button
+                type="button"
+                onClick={() => setEditingInbox(null)}
+                className="px-3 py-1.5 text-xs text-neutral-600 hover:text-neutral-900"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!editInboxName.trim()}
+                className="px-4 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-md transition-colors disabled:opacity-40 shadow-subtle"
+              >
+                Save Changes
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
       {/* Main Layout: Inbox Tabs/Sidebar + Tasks under selected inbox */}
@@ -182,7 +330,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
               >
                 <div className="flex items-center gap-2.5 min-w-0 pr-2">
                   <span
-                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm"
                     style={{ backgroundColor: inbox.color || '#0068d6' }}
                   />
                   <div className="truncate">
@@ -199,7 +347,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1.5 flex-shrink-0">
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
                       isSelected ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-600'
@@ -207,6 +355,17 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
                   >
                     {inboxTasks.length}
                   </span>
+
+                  {/* Customize Color / Edit Inbox */}
+                  <button
+                    onClick={(e) => startEditInbox(inbox, e)}
+                    className={`p-1 rounded transition-opacity ${
+                      isSelected ? 'text-white/70 hover:text-white' : 'text-neutral-400 hover:text-neutral-900 opacity-0 group-hover:opacity-100'
+                    }`}
+                    title="Customize inbox color and name"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                  </button>
 
                   {/* Allow deleting non-default inboxes */}
                   {inbox.id !== 'inbox-general' && (
@@ -220,7 +379,9 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
                           }
                         }
                       }}
-                      className="p-1 opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-red-500 rounded transition-opacity"
+                      className={`p-1 rounded transition-opacity ${
+                        isSelected ? 'text-white/70 hover:text-red-300' : 'text-neutral-400 hover:text-red-500 opacity-0 group-hover:opacity-100'
+                      }`}
                       title="Delete inbox"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -240,12 +401,23 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
             className="bg-white p-3.5 rounded-lg border border-[#ebebeb] shadow-subtle space-y-2.5"
           >
             <div className="flex items-center justify-between text-xs text-neutral-500">
-              <span className="font-semibold text-neutral-800">
-                Add task under{' '}
-                <span className="text-primary font-bold">
-                  {selectedInboxId === 'all'
-                    ? inboxes[0]?.name || 'General Inbox'
-                    : inboxes.find((i) => i.id === selectedInboxId)?.name}
+              <span className="font-semibold text-neutral-800 flex items-center gap-1.5">
+                <span>Add task under</span>
+                <span className="font-bold flex items-center gap-1">
+                  <span
+                    className="w-2 h-2 rounded-full inline-block"
+                    style={{
+                      backgroundColor:
+                        selectedInboxId === 'all'
+                          ? inboxes[0]?.color || '#0068d6'
+                          : inboxes.find((i) => i.id === selectedInboxId)?.color || '#0068d6',
+                    }}
+                  />
+                  <span>
+                    {selectedInboxId === 'all'
+                      ? inboxes[0]?.name || 'General Inbox'
+                      : inboxes.find((i) => i.id === selectedInboxId)?.name}
+                  </span>
                 </span>
               </span>
             </div>
@@ -358,7 +530,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
                         {task.priority === 'high' && (
                           <span className="text-[10px] px-1.5 py-0.2 rounded bg-red-50 text-red-600 font-medium border border-red-200/50">
                             High
@@ -375,9 +547,18 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
                           <span>Today</span>
                         </button>
 
+                        {/* Edit Task Button */}
+                        <button
+                          onClick={() => setEditingTask(task)}
+                          className="p-1 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+                          title="Edit task details"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+
                         <button
                           onClick={() => storage.deleteTask(task.id)}
-                          className="p-1 text-neutral-300 hover:text-red-500 rounded transition-colors"
+                          className="p-1 text-neutral-400 hover:text-red-500 rounded transition-colors"
                           title="Delete task"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -391,6 +572,13 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
           </div>
         </div>
       </div>
+
+      {/* Task Edit Modal */}
+      <TaskEditModal
+        task={editingTask}
+        inboxes={inboxes}
+        onClose={() => setEditingTask(null)}
+      />
     </div>
   );
 };

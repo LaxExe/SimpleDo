@@ -1,6 +1,6 @@
 import React from 'react';
 import { Page } from '../types';
-import { CheckSquare, Inbox, Activity, Sun, CheckCircle2 } from 'lucide-react';
+import { CheckSquare, Inbox, Activity, Sun } from 'lucide-react';
 
 interface NavigationProps {
   currentPage: Page;
@@ -52,22 +52,14 @@ export const Navigation: React.FC<NavigationProps> = ({
   return (
     <header className="sticky top-0 z-50 bg-[#fafafa]/90 backdrop-blur-md border-b border-[#ebebeb]">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        {/* Brand */}
+        {/* Brand: just "simple do", no icon, no subtitle */}
         <div 
           onClick={() => onNavigate('today')}
-          className="flex items-center gap-2.5 cursor-pointer group"
+          className="cursor-pointer select-none"
         >
-          <div className="w-8 h-8 rounded-lg bg-neutral-900 text-white flex items-center justify-center font-semibold text-sm shadow-subtle group-hover:scale-105 transition-transform duration-150">
-            <CheckCircle2 className="w-4 h-4 text-white" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-semibold text-sm tracking-tight text-neutral-900 leading-none">
-              SimpleDo
-            </span>
-            <span className="text-[11px] text-neutral-500 font-normal leading-none mt-1">
-              Habits & Tasks
-            </span>
-          </div>
+          <span className="font-semibold text-base tracking-tight text-neutral-900 lowercase hover:opacity-80 transition-opacity">
+            simple do
+          </span>
         </div>
 
         {/* 4 Tabs Navigation */}

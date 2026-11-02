@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Task, Habit, Page } from '../types';
+import { Task, Habit, InboxGroup, Page } from '../types';
 import { storage, getTodayStr } from '../services/storage';
 import { CalendarView } from '../components/CalendarView';
+import { TaskEditModal } from '../components/TaskEditModal';
 import { 
   CheckCircle2, 
   Circle, 
@@ -13,23 +14,27 @@ import {
   ChevronRight,
   Clock,
   Sparkles,
-  X
+  X,
+  Edit2
 } from 'lucide-react';
 
 interface TodayPageProps {
   tasks: Task[];
   habits: Habit[];
+  inboxes: InboxGroup[];
   onNavigate: (page: Page) => void;
 }
 
 export const TodayPage: React.FC<TodayPageProps> = ({
   tasks,
   habits,
+  inboxes,
   onNavigate,
 }) => {
   const [selectedDate, setSelectedDate] = useState<string>(getTodayStr());
   const [taskInput, setTaskInput] = useState('');
   const [isDropOver, setIsDropOver] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const todayStr = getTodayStr();
   const dayPlan = storage.getDayPlan(selectedDate);
@@ -42,7 +47,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
       t.dueDate === selectedDate
   );
 
-  // Compute habits for selected date
+  // Compute habits for selected date (only habits dragged into this day!)
   const plannedHabits = habits.filter((h) => dayPlan.plannedHabitIds.includes(h.id));
 
   // Available tasks not yet planned on selected date
@@ -74,7 +79,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
       completed: false,
       priority: 'medium',
       category: 'Day Plan',
-      inboxId: 'inbox-general',
+      inboxId: inboxes[0]?.id || 'inbox-general',
       scheduledDate: selectedDate,
       dueDate: selectedDate,
     });
@@ -116,6 +121,10 @@ export const TodayPage: React.FC<TodayPageProps> = ({
 
   const handleDropOnCalendarDate = (taskId: string, targetDate: string) => {
     storage.moveTaskToDate(taskId, targetDate, selectedDate);
+  };
+
+  const handleDropHabitOnCalendarDate = (habitId: string, targetDate: string) => {
+    storage.addHabitToDate(targetDate, habitId);
   };
 
   const handleMoveToTomorrow = (taskId: string) => {
@@ -245,7 +254,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                 </h2>
               </div>
               <span className="text-xs text-neutral-400">
-                Drag items here to schedule
+                Drag tasks or habits here
               </span>
             </div>
 
@@ -309,6 +318,15 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                           → Tomorrow
                         </button>
 
+                        {/* Edit task button */}
+                        <button
+                          onClick={() => setEditingTask(task)}
+                          className="p-1 text-neutral-300 hover:text-neutral-900 rounded transition-colors"
+                          title="Edit task details"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                        </button>
+
                         <button
                           onClick={() => storage.removeTaskFromDate(selectedDate, task.id)}
                           className="p-1 text-neutral-300 hover:text-red-500 rounded transition-colors"
@@ -323,17 +341,20 @@ export const TodayPage: React.FC<TodayPageProps> = ({
               )}
             </div>
 
-            {/* Section B: Planned Habits */}
+            {/* Section B: Planned Habits (Only dragged-in habits count toward streak!) */}
             <div className="space-y-2 pt-4 border-t border-[#ebebeb]">
               <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider flex items-center justify-between">
-                <span>Habits ({plannedHabits.length})</span>
+                <span>Habits Dragged In ({plannedHabits.length})</span>
+                <span className="text-[10px] text-neutral-400 font-normal lowercase">
+                  (only dragged-in habits affect streaks)
+                </span>
               </div>
 
               {plannedHabits.length === 0 ? (
                 <div className="py-5 border-2 border-dashed border-[#ebebeb] rounded-lg text-center">
-                  <p className="text-xs text-neutral-500">No habits on this day.</p>
+                  <p className="text-xs text-neutral-500">No habits dragged in for this day.</p>
                   <p className="text-[11px] text-neutral-400 mt-0.5">
-                    Drag habits from the available pool below to build your streak.
+                    Drag habits from the available pool on the right to track them without losing streaks on skipped days.
                   </p>
                 </div>
               ) : (
@@ -370,13 +391,13 @@ export const TodayPage: React.FC<TodayPageProps> = ({
 
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="flex items-center gap-0.5 text-[11px] font-mono text-neutral-500">
-                            <Flame className={`w-3.5 h-3.5 ${habit.streak > 0 ? 'text-orange-500' : 'text-neutral-300'}`} />
-                            <span>{habit.streak}d</span>
+                            <Flame className={`w-3.5 h-3.5 ${habit.streak > 0 ? 'text-orange-500 fill-orange-500' : 'text-neutral-300'}`} />
+                            <span>{habit.streak}d streak</span>
                           </span>
                           <button
                             onClick={() => storage.removeHabitFromDate(selectedDate, habit.id)}
                             className="p-1 text-neutral-300 hover:text-red-500 rounded transition-colors"
-                            title="Remove habit from this day"
+                            title="Remove habit from this day (won't penalize streak)"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -399,6 +420,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
             tasks={tasks}
             habits={habits}
             onDropTaskOnDate={handleDropOnCalendarDate}
+            onDropHabitOnDate={handleDropHabitOnCalendarDate}
           />
 
           {/* Draggable Pool: Available Tasks */}
@@ -432,13 +454,22 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                       <GripVertical className="w-3 h-3 text-neutral-400 flex-shrink-0" />
                       <span className="truncate text-neutral-800">{task.title}</span>
                     </div>
-                    <button
-                      onClick={() => storage.addTaskToDate(selectedDate, task.id)}
-                      className="p-1 text-primary hover:bg-[#ebf5ff] rounded transition-colors flex-shrink-0"
-                      title="Add to selected day"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => setEditingTask(task)}
+                        className="p-1 text-neutral-400 hover:text-neutral-900 rounded"
+                        title="Edit task"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => storage.addTaskToDate(selectedDate, task.id)}
+                        className="p-1 text-primary hover:bg-[#ebf5ff] rounded transition-colors"
+                        title="Add to selected day"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -486,6 +517,13 @@ export const TodayPage: React.FC<TodayPageProps> = ({
           )}
         </div>
       </div>
+
+      {/* Task Edit Modal */}
+      <TaskEditModal
+        task={editingTask}
+        inboxes={inboxes}
+        onClose={() => setEditingTask(null)}
+      />
     </div>
   );
 };

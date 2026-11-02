@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Task, InboxGroup, Priority } from '../types';
 import { storage, getTodayStr } from '../services/storage';
+import { TaskEditModal } from '../components/TaskEditModal';
 import { 
   Plus, 
   Trash2, 
@@ -8,7 +9,8 @@ import {
   Circle, 
   Calendar, 
   Tag,
-  Sun
+  Sun,
+  Edit2
 } from 'lucide-react';
 
 interface TasksPageProps {
@@ -23,6 +25,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
   const [priority, setPriority] = useState<Priority>('medium');
   const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
   const [isAdding, setIsAdding] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const todayStr = getTodayStr();
 
@@ -264,6 +267,15 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
                       <span>Today</span>
                     </button>
 
+                    {/* Edit Task Button */}
+                    <button
+                      onClick={() => setEditingTask(task)}
+                      className="p-1 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+                      title="Edit task details"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+
                     {/* Delete button */}
                     <button
                       onClick={() => storage.deleteTask(task.id)}
@@ -279,6 +291,13 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
           </ul>
         )}
       </div>
+
+      {/* Task Edit Modal */}
+      <TaskEditModal
+        task={editingTask}
+        inboxes={inboxes}
+        onClose={() => setEditingTask(null)}
+      />
     </div>
   );
 };

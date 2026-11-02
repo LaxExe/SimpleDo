@@ -53,6 +53,7 @@ export function App() {
           <TodayPage
             tasks={data.tasks}
             habits={data.habits}
+            inboxes={data.inboxes}
             onNavigate={setCurrentPage}
           />
         )}
@@ -72,7 +73,7 @@ export function App() {
       <footer className="border-t border-[#ebebeb] bg-[#fafafa] py-6 mt-auto">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-neutral-400">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-neutral-600">SimpleDo</span>
+            <span className="font-semibold text-neutral-700 lowercase">simple do</span>
             <span>•</span>
             <span>Persistent Habits & Tasks</span>
           </div>
