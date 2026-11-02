@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Task, Habit, InboxGroup, DayPlan, Page } from '../types';
-import { storage, getTodayStr, sortTasks } from '../services/storage';
+import { storage, getTodayStr, sortTasksByInbox } from '../services/storage';
 import { CalendarView } from '../components/CalendarView';
 import { TaskEditModal } from '../components/TaskEditModal';
 import { 
@@ -14,7 +14,8 @@ import {
   Sparkles,
   X,
   Edit2,
-  Layers
+  Layers,
+  ArrowRight
 } from 'lucide-react';
 
 interface TodayPageProps {
@@ -36,25 +37,30 @@ export const TodayPage: React.FC<TodayPageProps> = ({
   const [isDropOver, setIsDropOver] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   const todayStr = getTodayStr();
   const dayPlan = dayPlans[selectedDate] || storage.getDayPlan(selectedDate);
 
-  // Compute tasks for selected date & sort so active tasks appear first
+  // Compute tasks for selected date
   const rawPlannedTasks = tasks.filter(
     (t) =>
       dayPlan.plannedTaskIds.includes(t.id) ||
       t.scheduledDate === selectedDate ||
       t.dueDate === selectedDate
   );
-  const plannedTasks = sortTasks(rawPlannedTasks);
+
+  // Sort tasks by inbox: General first (not sorted), others sorted by inbox name matching their color
+  const { allOrderedTasks } = sortTasksByInbox(rawPlannedTasks, inboxes);
 
   // Compute habits for selected date (only habits dragged into this day)
   const plannedHabits = habits.filter((h) => dayPlan.plannedHabitIds.includes(h.id));
 
-  // Available tasks not yet planned on selected date (sorted active first)
-  const availableTasks = sortTasks(
-    tasks.filter((t) => !t.completed && !plannedTasks.some((pt) => pt.id === t.id))
+  // Available tasks not yet planned on selected date
+  const availableTasksRaw = tasks.filter(
+    (t) => !t.completed && !rawPlannedTasks.some((pt) => pt.id === t.id)
   );
+  const { allOrderedTasks: availableOrderedTasks } = sortTasksByInbox(availableTasksRaw, inboxes);
 
   // Available habits not yet in this day's plan
   const availableHabits = habits.filter(
@@ -100,6 +106,19 @@ export const TodayPage: React.FC<TodayPageProps> = ({
     setSelectedDate(d.toISOString().split('T')[0]);
   };
 
+  // Scroll to the right/left when tasks stack up
+  const handleScrollRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: 340, behavior: 'smooth' });
+    }
+  };
+
+  const handleScrollLeft = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: -340, behavior: 'smooth' });
+    }
+  };
+
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, type: 'task' | 'habit', id: string) => {
     e.dataTransfer.setData(`text/plain-${type}`, id);
@@ -143,8 +162,9 @@ export const TodayPage: React.FC<TodayPageProps> = ({
     storage.removeHabitFromDate(selectedDate, habitId);
   };
 
-  const completedPlannedTasks = plannedTasks.filter((t) => t.completed).length;
+  const completedPlannedTasks = allOrderedTasks.filter((item) => item.task.completed).length;
   const habitsDoneOnDate = plannedHabits.filter((h) => h.completedDates.includes(selectedDate)).length;
+  const hasStackedTasks = allOrderedTasks.length > 2;
 
   return (
     <div className="space-y-12 animate-fadeIn">
@@ -178,167 +198,226 @@ export const TodayPage: React.FC<TodayPageProps> = ({
             </button>
           )}
           <span className="text-xs font-mono text-neutral-600 bg-white px-3 py-1 rounded-full border border-[#ebebeb] shadow-2xs">
-            {completedPlannedTasks}/{plannedTasks.length} tasks • {habitsDoneOnDate}/{plannedHabits.length} habits
+            {completedPlannedTasks}/{allOrderedTasks.length} tasks • {habitsDoneOnDate}/{plannedHabits.length} habits
           </span>
         </div>
       </div>
 
       {/* ======================================================== */}
-      {/* 1. TOP SECTION: LARGE TEXT "TODAY" LISTING TASKS */}
+      {/* 1. TOP SECTION: "TODAY" IN LARGE TEXT WITH SCROLLABLE TASKS */}
       {/* ======================================================== */}
       <section className="space-y-6">
-        <div>
-          <div className="flex items-baseline justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+          <div>
             <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-neutral-900">
               {isToday ? 'Today' : formattedDate.split(',')[0]}
             </h1>
-            <span className="text-xs font-mono text-neutral-400">
-              {plannedTasks.length} {plannedTasks.length === 1 ? 'task' : 'tasks'} for today
-            </span>
+            <p className="text-sm text-neutral-500 mt-1">
+              {isToday
+                ? 'Your planned tasks and habits for today.'
+                : `Viewing planned items for ${formattedDate}.`}
+            </p>
           </div>
-          <p className="text-sm text-neutral-500 mt-1">
-            {isToday
-              ? 'Your active tasks and habits for today. Check them off as you complete them.'
-              : `Viewing scheduled items for ${formattedDate}.`}
-          </p>
+
+          {/* Horizontal Scroll Arrows when tasks stack up */}
+          {allOrderedTasks.length > 0 && (
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <span className="text-xs font-mono text-neutral-400 mr-1">
+                {allOrderedTasks.length} {allOrderedTasks.length === 1 ? 'task' : 'tasks'}
+              </span>
+
+              {hasStackedTasks && (
+                <div className="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-[#ebebeb] shadow-2xs">
+                  <button
+                    onClick={handleScrollLeft}
+                    className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-[#fafafa] rounded transition-colors"
+                    title="Scroll left"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleScrollRight}
+                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded transition-colors shadow-2xs"
+                    title="Scroll right to see more stacked tasks"
+                  >
+                    <span>Scroll</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Large Simple Task List */}
-        <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle divide-y divide-[#ebebeb] overflow-hidden">
-          {plannedTasks.length === 0 ? (
-            <div className="p-8 text-center text-sm text-neutral-400">
-              No tasks scheduled for today. Add or drag tasks below in the plan section.
-            </div>
-          ) : (
-            plannedTasks.map((task) => (
-              <div
-                key={task.id}
-                className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-[#fafafa]/70 transition-colors group"
-              >
-                {/* Large Checkbox & Large Task Title */}
-                <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                  <button
-                    onClick={() => storage.toggleTask(task.id)}
-                    className="flex-shrink-0 transition-transform active:scale-95"
-                  >
-                    {task.completed ? (
-                      <CheckCircle2 className="w-5 h-5 text-neutral-900 fill-neutral-900/10" />
-                    ) : (
-                      <Circle className="w-5 h-5 text-neutral-300 hover:text-neutral-700" />
-                    )}
-                  </button>
+        {/* Large Simple Task List / Horizontal Cards when stacked */}
+        {allOrderedTasks.length === 0 ? (
+          <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle p-8 text-center text-sm text-neutral-400">
+            No tasks scheduled for today. Add or drag tasks below in the plan section.
+          </div>
+        ) : (
+          <div
+            ref={scrollContainerRef}
+            className="flex gap-4 overflow-x-auto pb-3 pt-1 scroll-smooth snap-x"
+            style={{ scrollbarWidth: 'thin' }}
+          >
+            {allOrderedTasks.map(({ task, inbox, isGeneral }) => {
+              const inboxColor = inbox?.color || '#0068d6';
 
-                  <div className="min-w-0">
-                    <p
-                      className={`text-base sm:text-lg font-medium leading-snug truncate ${
-                        task.completed
-                          ? 'line-through text-neutral-400'
-                          : 'text-neutral-900'
-                      }`}
-                    >
-                      {task.title}
-                    </p>
-                    {task.category && (
-                      <span className="text-[11px] font-mono text-neutral-400">
-                        {task.category}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Badges & Effortless Remove Action */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {task.priority === 'high' && (
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-red-50 text-red-600 font-medium border border-red-200/50">
-                      High
-                    </span>
-                  )}
-
-                  <button
-                    onClick={() => handleMoveToTomorrow(task.id)}
-                    className="text-xs text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 px-2 py-1 rounded transition-colors hidden sm:inline-flex"
-                    title="Move to tomorrow"
-                  >
-                    → Tomorrow
-                  </button>
-
-                  <button
-                    onClick={() => setEditingTask(task)}
-                    className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
-                    title="Edit task"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-
-                  {/* Clear, easy remove button */}
-                  <button
-                    onClick={() => handleRemoveTaskFromDay(task.id)}
-                    className="inline-flex items-center gap-1 text-xs text-neutral-400 hover:text-red-600 hover:bg-red-50 px-2 py-1 rounded transition-colors"
-                    title="Remove from today"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Remove</span>
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-
-          {/* Planned Habits Row for Today */}
-          {plannedHabits.length > 0 && (
-            <div className="p-4 sm:p-5 bg-[#fafafa]/50 border-t border-[#ebebeb] space-y-2.5">
-              <div className="text-xs font-semibold text-neutral-700 uppercase tracking-wider flex items-center gap-1.5">
-                <Flame className="w-3.5 h-3.5 text-neutral-900" />
-                <span>Habits for today</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {plannedHabits.map((habit) => {
-                  const isDone = habit.completedDates.includes(selectedDate);
-                  return (
-                    <div
-                      key={habit.id}
-                      className="p-3 bg-white rounded-lg border border-[#ebebeb] flex items-center justify-between gap-3 shadow-2xs"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <button
-                          onClick={() => storage.toggleHabitDate(habit.id, selectedDate)}
-                          className="flex-shrink-0"
-                        >
-                          {isDone ? (
-                            <CheckCircle2 className="w-4 h-4 text-neutral-900 fill-neutral-900/10" />
-                          ) : (
-                            <Circle className="w-4 h-4 text-neutral-300 hover:text-neutral-700" />
-                          )}
-                        </button>
+              return (
+                <div
+                  key={task.id}
+                  className={`w-[290px] sm:w-[330px] shrink-0 snap-start bg-white rounded-xl border shadow-subtle p-5 flex flex-col justify-between transition-all group ${
+                    isGeneral
+                      ? 'border-[#ebebeb] hover:border-neutral-400'
+                      : 'border-l-4'
+                  }`}
+                  style={!isGeneral ? { borderLeftColor: inboxColor, borderColor: '#ebebeb' } : undefined}
+                >
+                  <div className="space-y-3">
+                    {/* Inbox Label matching inbox color */}
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium border"
+                        style={
+                          isGeneral
+                            ? { backgroundColor: '#f5f5f5', color: '#525252', borderColor: '#e5e5e5' }
+                            : {
+                                backgroundColor: `${inboxColor}12`,
+                                color: inboxColor,
+                                borderColor: `${inboxColor}30`,
+                              }
+                        }
+                      >
                         <span
-                          className={`text-sm font-medium truncate ${
-                            isDone ? 'line-through text-neutral-400' : 'text-neutral-900'
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ backgroundColor: isGeneral ? '#737373' : inboxColor }}
+                        />
+                        <span>{inbox?.name || 'General Inbox'}</span>
+                      </span>
+
+                      {task.priority === 'high' && (
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-red-50 text-red-600 font-medium border border-red-200/50">
+                          High
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Checkbox and Large Title */}
+                    <div className="flex items-start gap-3">
+                      <button
+                        onClick={() => storage.toggleTask(task.id)}
+                        className="mt-0.5 flex-shrink-0 transition-transform active:scale-95"
+                      >
+                        {task.completed ? (
+                          <CheckCircle2 className="w-5 h-5 text-neutral-900 fill-neutral-900/10" />
+                        ) : (
+                          <Circle className="w-5 h-5 text-neutral-300 hover:text-neutral-700" />
+                        )}
+                      </button>
+
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={`text-base sm:text-lg font-medium leading-snug break-words ${
+                            task.completed
+                              ? 'line-through text-neutral-400'
+                              : 'text-neutral-900'
                           }`}
                         >
-                          {habit.name}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="flex items-center gap-0.5 text-xs font-mono text-neutral-500">
-                          <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500" />
-                          <span>{habit.streak}d</span>
-                        </span>
-                        <button
-                          onClick={() => handleRemoveHabitFromDay(habit.id)}
-                          className="p-1 text-neutral-300 hover:text-red-600 rounded transition-colors"
-                          title="Remove habit from today"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
+                          {task.title}
+                        </p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+
+                  {/* Actions & Effortless Remove */}
+                  <div className="mt-4 pt-3 border-t border-[#ebebeb] flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleMoveToTomorrow(task.id)}
+                        className="text-xs text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 px-2 py-1 rounded transition-colors"
+                        title="Move to tomorrow"
+                      >
+                        → Tomorrow
+                      </button>
+                      <button
+                        onClick={() => setEditingTask(task)}
+                        className="p-1 text-neutral-400 hover:text-neutral-900 rounded"
+                        title="Edit task"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Effortless Remove Button */}
+                    <button
+                      onClick={() => handleRemoveTaskFromDay(task.id)}
+                      className="inline-flex items-center gap-1 text-xs text-neutral-400 hover:text-red-600 hover:bg-red-50 px-2 py-1 rounded transition-colors font-medium"
+                      title="Remove task from today"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Planned Habits Row for Today */}
+        {plannedHabits.length > 0 && (
+          <div className="p-4 sm:p-5 bg-white rounded-xl border border-[#ebebeb] shadow-subtle space-y-3">
+            <div className="text-xs font-semibold text-neutral-700 uppercase tracking-wider flex items-center gap-1.5">
+              <Flame className="w-3.5 h-3.5 text-neutral-900" />
+              <span>Habits for today</span>
             </div>
-          )}
-        </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {plannedHabits.map((habit) => {
+                const isDone = habit.completedDates.includes(selectedDate);
+                return (
+                  <div
+                    key={habit.id}
+                    className="p-3.5 bg-[#fafafa] rounded-lg border border-[#ebebeb] flex items-center justify-between gap-3 shadow-2xs"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <button
+                        onClick={() => storage.toggleHabitDate(habit.id, selectedDate)}
+                        className="flex-shrink-0"
+                      >
+                        {isDone ? (
+                          <CheckCircle2 className="w-4 h-4 text-neutral-900 fill-neutral-900/10" />
+                        ) : (
+                          <Circle className="w-4 h-4 text-neutral-300 hover:text-neutral-700" />
+                        )}
+                      </button>
+                      <span
+                        className={`text-sm font-medium truncate ${
+                          isDone ? 'line-through text-neutral-400' : 'text-neutral-900'
+                        }`}
+                      >
+                        {habit.name}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="flex items-center gap-0.5 text-xs font-mono text-neutral-500">
+                        <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500" />
+                        <span>{habit.streak}d</span>
+                      </span>
+                      <button
+                        onClick={() => handleRemoveHabitFromDay(habit.id)}
+                        className="p-1 text-neutral-300 hover:text-red-600 rounded transition-colors"
+                        title="Remove habit from today"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ======================================================== */}
@@ -399,39 +478,53 @@ export const TodayPage: React.FC<TodayPageProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Available Tasks */}
+            {/* Available Tasks (Sorted by inbox with matching colors) */}
             <div className="space-y-2">
               <div className="text-xs font-medium text-neutral-500 flex items-center justify-between">
-                <span>Tasks ({availableTasks.length})</span>
+                <span>Tasks ({availableOrderedTasks.length})</span>
               </div>
 
-              {availableTasks.length === 0 ? (
+              {availableOrderedTasks.length === 0 ? (
                 <div className="py-6 text-center text-xs text-neutral-400 border border-dashed border-[#ebebeb] rounded-lg">
                   All active tasks are planned.
                 </div>
               ) : (
                 <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                  {availableTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, 'task', task.id)}
-                      className="p-2 text-xs bg-[#fafafa] hover:bg-neutral-100 border border-[#ebebeb] rounded-md flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing transition-colors"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <GripVertical className="w-3 h-3 text-neutral-400 flex-shrink-0" />
-                        <span className="truncate text-neutral-800">{task.title}</span>
-                      </div>
-                      <button
-                        onClick={() => storage.addTaskToDate(selectedDate, task.id)}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-neutral-900 hover:bg-neutral-200/70 rounded transition-colors"
-                        title="Add to today"
+                  {availableOrderedTasks.map(({ task, inbox, isGeneral }) => {
+                    const color = inbox?.color || '#0068d6';
+                    return (
+                      <div
+                        key={task.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, 'task', task.id)}
+                        className={`p-2 text-xs bg-[#fafafa] hover:bg-neutral-100 border rounded-md flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing transition-colors ${
+                          !isGeneral ? 'border-l-2' : 'border-[#ebebeb]'
+                        }`}
+                        style={!isGeneral ? { borderLeftColor: color, borderColor: '#ebebeb' } : undefined}
                       >
-                        <Plus className="w-3 h-3" />
-                        <span>Add</span>
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-2 min-w-0">
+                          <GripVertical className="w-3 h-3 text-neutral-400 flex-shrink-0" />
+                          <span className="truncate text-neutral-800">{task.title}</span>
+                          {!isGeneral && (
+                            <span
+                              className="text-[10px] px-1.5 py-0.2 rounded font-mono shrink-0"
+                              style={{ backgroundColor: `${color}15`, color }}
+                            >
+                              {inbox?.name}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => storage.addTaskToDate(selectedDate, task.id)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-neutral-900 hover:bg-neutral-200/70 rounded transition-colors"
+                          title="Add to today"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Add</span>
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
