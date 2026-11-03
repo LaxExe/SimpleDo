@@ -5,7 +5,6 @@ import { TaskProgressBar } from '../components/TaskProgressBar';
 import { TaskEditModal } from '../components/TaskEditModal';
 import { EventEditModal } from '../components/EventEditModal';
 import { 
-  Inbox, 
   Plus, 
   Trash2, 
   CheckCircle2, 
@@ -228,9 +227,6 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
             Inbox Hub
           </h1>
-          <p className="text-xs text-neutral-500 mt-1">
-            Manage your inboxes, customize colors, and organize tasks.
-          </p>
         </div>
         <button
           onClick={() => setIsCreatingInbox(!isCreatingInbox)}
@@ -694,12 +690,8 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
             </div>
 
             {activeTasks.length === 0 ? (
-              <div className="py-12 text-center">
-                <Inbox className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
-                <p className="text-xs font-medium text-neutral-700">No active tasks in this inbox</p>
-                <p className="text-xs text-neutral-400 mt-0.5">
-                  Type above to add tasks directly into this inbox.
-                </p>
+              <div className="py-10 text-center text-xs text-neutral-400">
+                No active tasks
               </div>
             ) : (
               <ul className="divide-y divide-[#ebebeb]/70">
@@ -816,9 +808,6 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-neutral-200 text-neutral-700">
                   {activeEvents.length}
                 </span>
-                <span className="text-[10px] text-neutral-400 font-normal">
-                  ({isEventsOpen ? 'collapse' : 'expand'})
-                </span>
               </button>
               <button
                 type="button"
@@ -832,16 +821,11 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
 
             {isEventsOpen && (
               <>
-
-            {activeEvents.length === 0 ? (
-              <div className="py-8 text-center text-xs text-neutral-400">
-                <Calendar className="w-6 h-6 text-neutral-300 mx-auto mb-1.5" />
-                <p className="font-medium text-neutral-600">No events in this inbox</p>
-                <p className="text-[11px] text-neutral-400 mt-0.5">
-                  Switch to the Event tab above to create meetings and scheduled entries.
-                </p>
-              </div>
-            ) : (
+                {activeEvents.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-neutral-400">
+                    No events
+                  </div>
+                ) : (
               <ul className="divide-y divide-[#ebebeb]/70">
                 {activeEvents.map((evt) => {
                   const inboxInfo = inboxes.find((i) => i.id === evt.inboxId);

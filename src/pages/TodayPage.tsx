@@ -239,7 +239,6 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                     <button
                       onClick={() => storage.toggleTask(task.id)}
                       className="flex-shrink-0 transition-transform active:scale-95"
-                      title="Click circle to confirm task completion"
                     >
                       {task.completed ? (
                         <div className="w-5 h-5 rounded-full bg-neutral-200 border-2 border-neutral-900 flex items-center justify-center">
@@ -266,7 +265,6 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                             ? 'text-white'
                             : 'text-neutral-900'
                         }`}
-                        title={task.hasProgress ? `Progress: ${task.completedParts ?? 0}/4 (Click to cycle)` : 'Click to enable progress bar'}
                       >
                         {task.title}
                       </p>
@@ -431,9 +429,6 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                     {selectedDateEvents.length}
                   </span>
                 </div>
-                <span className="text-[11px] font-mono font-normal text-neutral-400 lowercase">
-                  {isEventsOpen ? 'hide' : 'show'}
-                </span>
               </button>
 
               {isEventsOpen && (

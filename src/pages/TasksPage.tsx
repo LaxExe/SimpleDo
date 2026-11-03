@@ -120,9 +120,6 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
             Tasks
           </h1>
-          <p className="text-xs text-neutral-500 mt-1">
-            Organize, prioritize, and check off your to-dos.
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -256,14 +253,8 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
       {/* Tasks List */}
       <div className="bg-white rounded-lg border border-[#ebebeb] shadow-subtle overflow-hidden">
         {filteredTasks.length === 0 ? (
-          <div className="py-12 text-center">
-            <CheckCircle2 className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
-            <p className="text-xs font-medium text-neutral-700">No tasks found</p>
-            <p className="text-xs text-neutral-400 mt-0.5">
-              {filter === 'completed'
-                ? 'Check off tasks to see them completed here.'
-                : 'Click "Add Task" above to create one.'}
-            </p>
+          <div className="py-12 text-center text-xs text-neutral-400">
+            No tasks found
           </div>
         ) : (
           <ul className="divide-y divide-[#ebebeb]/70">
@@ -297,7 +288,6 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
                             ? 'line-through text-neutral-400'
                             : 'text-neutral-900'
                         }`}
-                        title={task.hasProgress ? `Progress: ${task.completedParts ?? 0}/4 (Click to cycle)` : 'Click to enable progress bar'}
                       >
                         {task.title}
                       </p>

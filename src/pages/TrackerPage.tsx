@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Habit } from '../types';
 import { storage } from '../services/storage';
 import { 
-  Activity, 
   Plus, 
   Trash2, 
   Flame, 
@@ -58,9 +57,6 @@ export const TrackerPage: React.FC<TrackerPageProps> = ({ habits }) => {
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
             Habit Tracker
           </h1>
-          <p className="text-xs text-neutral-500 mt-1">
-            Build discipline with consistent daily routines and visual streaks.
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -165,12 +161,8 @@ export const TrackerPage: React.FC<TrackerPageProps> = ({ habits }) => {
       {/* Habit Tracker Table / Cards */}
       <div className="bg-white rounded-lg border border-[#ebebeb] shadow-subtle overflow-hidden">
         {habits.length === 0 ? (
-          <div className="py-16 text-center">
-            <Activity className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-            <h3 className="text-sm font-semibold text-neutral-800">No habits tracked yet</h3>
-            <p className="text-xs text-neutral-500 mt-1 max-w-sm mx-auto">
-              Track repeated actions like hydration, exercise, deep work, or reading to build lasting streaks.
-            </p>
+          <div className="py-12 text-center text-xs text-neutral-400">
+            No habits tracked yet
           </div>
         ) : (
           <div className="divide-y divide-[#ebebeb]/70">
