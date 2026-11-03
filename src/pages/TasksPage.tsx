@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Task, InboxGroup, Priority } from '../types';
 import { storage, getTodayStr, sortTasks } from '../services/storage';
+import { TaskProgressBar } from '../components/TaskProgressBar';
 import { TaskEditModal } from '../components/TaskEditModal';
 import { 
   Plus, 
@@ -236,14 +237,29 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
 
                     <div className="min-w-0">
                       <p
-                        className={`text-xs font-medium truncate ${
+                        onClick={() => {
+                          const current = task.completed ? 4 : (task.completedParts || 0);
+                          const next = current >= 4 ? 0 : current + 1;
+                          storage.setTaskProgress(task.id, next);
+                        }}
+                        className={`text-xs font-medium truncate cursor-pointer hover:opacity-80 transition-opacity ${
                           task.completed
                             ? 'line-through text-neutral-400'
                             : 'text-neutral-900'
                         }`}
+                        title="Click to advance progress"
                       >
                         {task.title}
                       </p>
+                      <div className="mt-1">
+                        <TaskProgressBar
+                          taskId={task.id}
+                          completedParts={task.completedParts}
+                          totalParts={task.totalParts || 4}
+                          completed={task.completed}
+                          size="sm"
+                        />
+                      </div>
                     </div>
                   </div>
 

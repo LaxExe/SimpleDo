@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Task, InboxGroup, Priority, InboxEvent } from '../types';
 import { storage, getTodayStr, PRESET_INBOX_COLORS, sortTasks } from '../services/storage';
+import { TaskProgressBar } from '../components/TaskProgressBar';
 import { TaskEditModal } from '../components/TaskEditModal';
 import { EventEditModal } from '../components/EventEditModal';
 import { 
@@ -719,10 +720,18 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
                           <Circle className="w-4 h-4 text-neutral-300 hover:text-neutral-500" />
                         </button>
                         <div className="min-w-0">
-                          <p className="text-xs font-medium truncate text-neutral-900">
+                          <p 
+                            onClick={() => {
+                              const current = task.completed ? 4 : (task.completedParts || 0);
+                              const next = current >= 4 ? 0 : current + 1;
+                              storage.setTaskProgress(task.id, next);
+                            }}
+                            className="text-xs font-medium truncate text-neutral-900 cursor-pointer hover:opacity-80 transition-opacity"
+                            title="Click to advance progress"
+                          >
                             {task.title}
                           </p>
-                          <div className="flex items-center gap-2 text-[10px] text-neutral-400 font-mono mt-0.5">
+                          <div className="flex flex-wrap items-center gap-3 text-[10px] text-neutral-400 font-mono mt-1">
                             {inboxInfo && (
                               <span className="flex items-center gap-1">
                                 <span
@@ -735,6 +744,13 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
                             {task.dueDate && (
                               <span>Due {task.dueDate}</span>
                             )}
+                            <TaskProgressBar
+                              taskId={task.id}
+                              completedParts={task.completedParts}
+                              totalParts={task.totalParts || 4}
+                              completed={task.completed}
+                              size="sm"
+                            />
                           </div>
                         </div>
                       </div>

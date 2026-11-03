@@ -21,6 +21,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   const [inboxId, setInboxId] = useState(task.inboxId || inboxes[0]?.id || 'inbox-general');
   const [dueDate, setDueDate] = useState(task.dueDate || '');
   const [scheduledDate, setScheduledDate] = useState(task.scheduledDate || '');
+  const [completedParts, setCompletedParts] = useState(task.completed ? 4 : (task.completedParts ?? 0));
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +36,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
       category: selectedInbox?.name || 'General',
       dueDate: dueDate || undefined,
       scheduledDate: scheduledDate || undefined,
+      completedParts,
+      completed: completedParts >= 4,
     });
 
     onClose();
@@ -141,6 +144,29 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                 onChange={(e) => setDueDate(e.target.value)}
                 className="w-full px-2.5 py-1.5 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
               />
+            </div>
+          </div>
+
+          {/* Task Progress (4 parts) */}
+          <div>
+            <label className="block text-xs font-medium text-neutral-700 mb-1">
+              Progress (4 parts)
+            </label>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[0, 1, 2, 3, 4].map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setCompletedParts(p)}
+                  className={`px-2.5 py-1 text-xs rounded-md border font-mono transition-all ${
+                    completedParts === p
+                      ? 'bg-neutral-900 text-white border-neutral-900 font-semibold'
+                      : 'bg-white text-neutral-600 border-[#ebebeb] hover:bg-neutral-50'
+                  }`}
+                >
+                  {p}/4 ({p * 25}%)
+                </button>
+              ))}
             </div>
           </div>
 

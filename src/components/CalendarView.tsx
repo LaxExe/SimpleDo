@@ -57,16 +57,21 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     onSelectDate(todayStr);
   };
 
-  // Group tasks by date
+  // Group tasks by date (both scheduled and due date)
   const tasksByDate: Record<string, Task[]> = {};
   tasks.forEach((task) => {
-    const date = task.scheduledDate || task.dueDate;
-    if (date) {
-      if (!tasksByDate[date]) {
-        tasksByDate[date] = [];
+    const dates = new Set<string>();
+    if (task.scheduledDate) dates.add(task.scheduledDate);
+    if (task.dueDate) dates.add(task.dueDate);
+
+    dates.forEach((d) => {
+      if (!tasksByDate[d]) {
+        tasksByDate[d] = [];
       }
-      tasksByDate[date].push(task);
-    }
+      if (!tasksByDate[d].some((t) => t.id === task.id)) {
+        tasksByDate[d].push(task);
+      }
+    });
   });
 
   const cells = [];
@@ -205,16 +210,28 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   {cell.day}
                 </span>
 
-                {/* Habit indicator if habits scheduled */}
-                {plannedHabitsCount > 0 && (
-                  <span
-                    className="inline-flex items-center gap-0.5 text-[10px] font-mono text-orange-600 bg-orange-50 px-1.5 py-0.2 rounded"
-                    title={`${plannedHabitsCount} habits planned`}
-                  >
-                    <Flame className="w-2.5 h-2.5 fill-orange-500 text-orange-500" />
-                    <span>{plannedHabitsCount}</span>
-                  </span>
-                )}
+                <div className="flex items-center gap-1">
+                  {/* Due task indicator for this date */}
+                  {visibleDateTasks.some((t) => t.dueDate === cell.dateStr) && (
+                    <span 
+                      className="text-[8px] font-mono font-bold px-1 py-0.2 rounded bg-neutral-900 text-white tracking-tight"
+                      title="Tasks due on this day"
+                    >
+                      DUE
+                    </span>
+                  )}
+
+                  {/* Habit indicator if habits scheduled */}
+                  {plannedHabitsCount > 0 && (
+                    <span
+                      className="inline-flex items-center gap-0.5 text-[10px] font-mono text-orange-600 bg-orange-50 px-1.5 py-0.2 rounded"
+                      title={`${plannedHabitsCount} habits planned`}
+                    >
+                      <Flame className="w-2.5 h-2.5 fill-orange-500 text-orange-500" />
+                      <span>{plannedHabitsCount}</span>
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Task Items Preview */}
@@ -223,12 +240,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   const taskInbox = inboxes.find(
                     (i) => i.id === (task.inboxId || 'inbox-general')
                   );
+                  const isDueThisDay = task.dueDate === cell.dateStr;
                   return (
                     <div
                       key={task.id}
                       className={`text-[10px] truncate px-1.5 py-0.5 rounded flex items-center gap-1 border transition-colors ${
                         task.completed
                           ? 'bg-neutral-100 text-neutral-400 border-neutral-200 line-through'
+                          : isDueThisDay
+                          ? 'bg-neutral-100 font-medium text-neutral-900 border-neutral-300'
                           : task.priority === 'high'
                           ? 'bg-red-50 text-red-700 border-red-200/60 font-medium'
                           : 'bg-[#fafafa] text-neutral-800 border-[#ebebeb]'
@@ -244,7 +264,17 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       ) : (
                         <Circle className="w-2.5 h-2.5 text-neutral-400 flex-shrink-0" />
                       )}
+                      {isDueThisDay && (
+                        <span className="text-[7px] font-mono font-bold px-0.5 rounded bg-neutral-900 text-white flex-shrink-0">
+                          DUE
+                        </span>
+                      )}
                       <span className="truncate">{task.title}</span>
+                      {(task.completedParts || 0) > 0 && !task.completed && (
+                        <span className="text-[8px] font-mono text-neutral-500 font-semibold ml-auto flex-shrink-0">
+                          {task.completedParts}/4
+                        </span>
+                      )}
                     </div>
                   );
                 })}

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Task, Habit, InboxGroup, DayPlan, Page, InboxEvent } from '../types';
 import { storage, getTodayStr, sortTasks } from '../services/storage';
 import { CalendarView } from '../components/CalendarView';
+import { TaskProgressBar } from '../components/TaskProgressBar';
 import { TaskEditModal } from '../components/TaskEditModal';
 import { 
   Plus, 
@@ -279,22 +280,39 @@ export const TodayPage: React.FC<TodayPageProps> = ({
 
                     <div className="min-w-0">
                       <p
-                        className={`text-base sm:text-lg font-medium leading-snug truncate ${
+                        onClick={() => {
+                          const current = task.completed ? 4 : (task.completedParts || 0);
+                          const next = current >= 4 ? 0 : current + 1;
+                          storage.setTaskProgress(task.id, next);
+                        }}
+                        className={`text-base sm:text-lg font-medium leading-snug truncate cursor-pointer hover:opacity-80 transition-opacity ${
                           task.completed
                             ? 'line-through text-neutral-400'
                             : 'text-neutral-900'
                         }`}
+                        title="Click to advance progress"
                       >
                         {task.title}
                       </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span
-                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: taskInbox?.color || '#171717' }}
+                      <div className="flex flex-wrap items-center gap-3 mt-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: taskInbox?.color || '#171717' }}
+                          />
+                          <span className="text-xs font-mono text-neutral-500">
+                            {taskInbox?.name || task.category || 'General'}
+                          </span>
+                        </div>
+
+                        {/* 4-Part Progress Bar */}
+                        <TaskProgressBar
+                          taskId={task.id}
+                          completedParts={task.completedParts}
+                          totalParts={task.totalParts || 4}
+                          completed={task.completed}
+                          size="md"
                         />
-                        <span className="text-xs font-mono text-neutral-400">
-                          {taskInbox?.name || task.category || 'General'}
-                        </span>
                       </div>
                     </div>
                   </div>

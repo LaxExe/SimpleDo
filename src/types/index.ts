@@ -19,6 +19,8 @@ export interface Task {
   inboxId?: string; // Links task to a specific inbox
   dueDate?: string; // YYYY-MM-DD
   scheduledDate?: string; // YYYY-MM-DD (Date on which this task is planned in the Today/Day planner)
+  totalParts?: number; // Total parts for progress tracking (default: 4)
+  completedParts?: number; // Completed parts (0 to 4)
   createdAt: string;
 }
 

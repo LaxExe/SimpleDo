@@ -147,6 +147,13 @@ export const storage = {
       if (!parsed.events) {
         parsed.events = [];
       }
+      if (parsed.tasks) {
+        parsed.tasks = parsed.tasks.map((t: Task) => ({
+          ...t,
+          totalParts: t.totalParts || 4,
+          completedParts: t.completed ? (t.totalParts || 4) : (t.completedParts ?? 0),
+        }));
+      }
       return parsed;
     } catch {
       return defaultData;
@@ -166,6 +173,8 @@ export const storage = {
   addTask(task: Omit<Task, 'id' | 'createdAt'>) {
     const data = this.load();
     const newTask: Task = {
+      totalParts: 4,
+      completedParts: 0,
       ...task,
       id: `task-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       createdAt: new Date().toISOString(),
@@ -223,9 +232,36 @@ export const storage = {
 
   toggleTask(id: string) {
     const data = this.load();
-    data.tasks = data.tasks.map((t) =>
-      t.id === id ? { ...t, completed: !t.completed } : t
-    );
+    data.tasks = data.tasks.map((t) => {
+      if (t.id === id) {
+        const willComplete = !t.completed;
+        const total = t.totalParts || 4;
+        return {
+          ...t,
+          completed: willComplete,
+          completedParts: willComplete ? total : 0,
+        };
+      }
+      return t;
+    });
+    this.save(data);
+  },
+
+  setTaskProgress(id: string, parts: number) {
+    const data = this.load();
+    data.tasks = data.tasks.map((t) => {
+      if (t.id === id) {
+        const total = t.totalParts || 4;
+        const clamped = Math.max(0, Math.min(total, parts));
+        const completed = clamped >= total;
+        return {
+          ...t,
+          completedParts: clamped,
+          completed,
+        };
+      }
+      return t;
+    });
     this.save(data);
   },
 
