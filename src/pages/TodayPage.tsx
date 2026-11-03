@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Task, Habit, InboxGroup, DayPlan, Page } from '../types';
+import { Task, Habit, InboxGroup, DayPlan, Page, InboxEvent } from '../types';
 import { storage, getTodayStr, sortTasks } from '../services/storage';
 import { CalendarView } from '../components/CalendarView';
 import { TaskEditModal } from '../components/TaskEditModal';
@@ -13,11 +13,15 @@ import {
   X, 
   Edit2, 
   Layers,
-  Check
+  Check,
+  Clock,
+  MapPin,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 
 interface TodayPageProps {
   tasks: Task[];
+  events?: InboxEvent[];
   habits: Habit[];
   inboxes: InboxGroup[];
   dayPlans: Record<string, DayPlan>;
@@ -26,6 +30,7 @@ interface TodayPageProps {
 
 export const TodayPage: React.FC<TodayPageProps> = ({
   tasks,
+  events = [],
   habits,
   inboxes,
   dayPlans,
@@ -60,6 +65,9 @@ export const TodayPage: React.FC<TodayPageProps> = ({
 
   // Compute habits for selected date (only habits dragged into this day)
   const plannedHabits = habits.filter((h) => dayPlan.plannedHabitIds.includes(h.id));
+
+  // Compute events for selected date (sitting below tasks, not assignable to plan mode)
+  const selectedDateEvents = events.filter((e) => e.date === selectedDate);
 
   // Available tasks not yet planned on selected date (sorted active first)
   const availableTasks = sortTasks(
@@ -374,6 +382,61 @@ export const TodayPage: React.FC<TodayPageProps> = ({
               </div>
             </div>
           )}
+
+          {/* Events for Today / Selected Date (sitting below tasks) */}
+          {selectedDateEvents.length > 0 && (
+            <div className="p-4 sm:p-5 bg-white border-t border-[#ebebeb] space-y-2.5">
+              <div className="text-xs font-semibold text-neutral-700 uppercase tracking-wider flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <CalendarIcon className="w-3.5 h-3.5 text-neutral-900" />
+                  <span>Events</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-neutral-100 text-neutral-600">
+                    {selectedDateEvents.length}
+                  </span>
+                </div>
+                <span className="text-[11px] text-neutral-400 font-normal normal-case">
+                  Calendar entries (time & location)
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {selectedDateEvents.map((evt) => {
+                  const inboxInfo = inboxes.find((i) => i.id === evt.inboxId);
+                  return (
+                    <div
+                      key={evt.id}
+                      className="p-3 bg-[#fafafa] rounded-lg border border-[#ebebeb] flex items-start justify-between gap-2 shadow-2xs"
+                    >
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: inboxInfo?.color || '#171717' }}
+                          />
+                          <span className="text-xs font-semibold text-neutral-900 truncate">
+                            {evt.title}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-[11px] text-neutral-500 font-mono">
+                          {evt.time && (
+                            <span className="flex items-center gap-1 text-neutral-800 font-medium">
+                              <Clock className="w-3 h-3 text-neutral-400" />
+                              <span>{evt.time}</span>
+                            </span>
+                          )}
+                          {evt.location && (
+                            <span className="flex items-center gap-1 text-neutral-600 truncate">
+                              <MapPin className="w-3 h-3 text-neutral-400 flex-shrink-0" />
+                              <span className="truncate">{evt.location}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -573,6 +636,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
           selectedDate={selectedDate}
           onSelectDate={setSelectedDate}
           tasks={tasks}
+          events={events}
           habits={habits}
           dayPlans={dayPlans}
           onDropTaskOnDate={handleDropOnCalendarDate}

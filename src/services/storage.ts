@@ -1,4 +1,4 @@
-import { SimpleDoData, Task, InboxGroup, Habit, DayPlan } from '../types';
+import { SimpleDoData, Task, InboxGroup, Habit, DayPlan, InboxEvent } from '../types';
 
 const STORAGE_KEY = 'simpledo_data_v4';
 const EVENT_NAME = 'simpledo:change';
@@ -61,11 +61,13 @@ const defaultInboxes: InboxGroup[] = [
 ];
 
 const defaultTasks: Task[] = [];
+const defaultEvents: InboxEvent[] = [];
 const defaultHabits: Habit[] = [];
 const defaultDayPlans: Record<string, DayPlan> = {};
 
 const defaultData: SimpleDoData = {
   tasks: defaultTasks,
+  events: defaultEvents,
   inboxes: defaultInboxes,
   habits: defaultHabits,
   dayPlans: defaultDayPlans,
@@ -141,6 +143,9 @@ export const storage = {
       }
       if (!parsed.dayPlans) {
         parsed.dayPlans = defaultDayPlans;
+      }
+      if (!parsed.events) {
+        parsed.events = [];
       }
       return parsed;
     } catch {
@@ -261,6 +266,9 @@ export const storage = {
     data.tasks = data.tasks.map((t) =>
       t.inboxId === id ? { ...t, inboxId: 'inbox-general' } : t
     );
+    data.events = (data.events || []).map((e) =>
+      e.inboxId === id ? { ...e, inboxId: 'inbox-general' } : e
+    );
     data.inboxes = data.inboxes.filter((i) => i.id !== id);
     this.save(data);
   },
@@ -283,6 +291,36 @@ export const storage = {
     }
     const [moved] = data.inboxes.splice(fromIndex, 1);
     data.inboxes.splice(toIndex, 0, moved);
+    this.save(data);
+  },
+
+  // ---------------- Events (Inbox Calendar Entries) ----------------
+  addEvent(event: Omit<InboxEvent, 'id' | 'createdAt'>) {
+    const data = this.load();
+    const newEvent: InboxEvent = {
+      ...event,
+      id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      createdAt: new Date().toISOString(),
+    };
+    if (!data.events) {
+      data.events = [];
+    }
+    data.events.unshift(newEvent);
+    this.save(data);
+    return newEvent;
+  },
+
+  updateEvent(id: string, updates: Partial<InboxEvent>) {
+    const data = this.load();
+    if (!data.events) data.events = [];
+    data.events = data.events.map((e) => (e.id === id ? { ...e, ...updates } : e));
+    this.save(data);
+  },
+
+  deleteEvent(id: string) {
+    const data = this.load();
+    if (!data.events) data.events = [];
+    data.events = data.events.filter((e) => e.id !== id);
     this.save(data);
   },
 
@@ -461,6 +499,7 @@ export const storage = {
   resetAll() {
     this.save({
       tasks: [],
+      events: [],
       inboxes: defaultInboxes,
       habits: [],
       dayPlans: {},

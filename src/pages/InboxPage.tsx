@@ -1,34 +1,55 @@
 import React, { useState } from 'react';
-import { Task, InboxGroup, Priority } from '../types';
+import { Task, InboxGroup, Priority, InboxEvent } from '../types';
 import { storage, getTodayStr, PRESET_INBOX_COLORS, sortTasks } from '../services/storage';
 import { TaskEditModal } from '../components/TaskEditModal';
+import { EventEditModal } from '../components/EventEditModal';
 import { 
   Inbox, 
   Plus, 
   Trash2, 
   CheckCircle2, 
   Circle, 
-  FolderPlus,
-  Layers,
-  Sun,
-  Edit2,
-  Check,
-  GripVertical,
-  ChevronUp,
-  ChevronDown
+  FolderPlus, 
+  Layers, 
+  Sun, 
+  Edit2, 
+  Check, 
+  GripVertical, 
+  ChevronUp, 
+  ChevronDown,
+  Calendar,
+  Clock,
+  MapPin
 } from 'lucide-react';
 
 interface InboxPageProps {
   tasks: Task[];
+  events?: InboxEvent[];
   inboxes: InboxGroup[];
 }
 
-export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
+export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxes }) => {
   const [selectedInboxId, setSelectedInboxId] = useState<string>('all');
+  
+  // Create mode: task vs event
+  const [createType, setCreateType] = useState<'task' | 'event'>('task');
+
+  // Task form state
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskPriority, setNewTaskPriority] = useState<Priority>('medium');
   const [newTaskDueDate, setNewTaskDueDate] = useState('');
-  
+
+  // Event form state
+  const [newEventTitle, setNewEventTitle] = useState('');
+  const [newEventDate, setNewEventDate] = useState(getTodayStr());
+  const [newEventTime, setNewEventTime] = useState('');
+  const [newEventLocation, setNewEventLocation] = useState('');
+  const [newEventDesc, setNewEventDesc] = useState('');
+
+  // Modals state
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingEvent, setEditingEvent] = useState<InboxEvent | null>(null);
+
   // New Inbox creation
   const [isCreatingInbox, setIsCreatingInbox] = useState(false);
   const [newInboxName, setNewInboxName] = useState('');
@@ -40,9 +61,6 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
   const [editInboxName, setEditInboxName] = useState('');
   const [editInboxDesc, setEditInboxDesc] = useState('');
   const [editInboxColor, setEditInboxColor] = useState('');
-
-  // Task editing
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   // Inbox reordering state
   const [draggedInboxIndex, setDraggedInboxIndex] = useState<number | null>(null);
@@ -164,6 +182,34 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
   });
 
   const filteredTasks = sortTasks(rawFilteredTasks);
+
+  // Filter events based on selected inbox
+  const filteredEvents = events.filter((e) => {
+    if (selectedInboxId === 'all') return true;
+    return (e.inboxId || 'inbox-general') === selectedInboxId;
+  });
+
+  const handleAddEvent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEventTitle.trim() || !newEventDate) return;
+
+    const targetInboxId =
+      selectedInboxId === 'all' ? inboxes[0]?.id || 'inbox-general' : selectedInboxId;
+
+    storage.addEvent({
+      title: newEventTitle.trim(),
+      inboxId: targetInboxId,
+      date: newEventDate,
+      time: newEventTime.trim() || undefined,
+      location: newEventLocation.trim() || undefined,
+      description: newEventDesc.trim() || undefined,
+    });
+
+    setNewEventTitle('');
+    setNewEventTime('');
+    setNewEventLocation('');
+    setNewEventDesc('');
+  };
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -514,14 +560,14 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
 
         {/* Right Column: Add Tasks Under Selected Inbox & List (8 cols) */}
         <div className="md:col-span-8 space-y-4">
-          {/* Add Task Directly Under this Inbox */}
+          {/* Add Task / Event Directly Under this Inbox */}
           <form
-            onSubmit={handleAddTask}
+            onSubmit={createType === 'task' ? handleAddTask : handleAddEvent}
             className="bg-white p-3.5 rounded-lg border border-[#ebebeb] shadow-subtle space-y-2.5"
           >
             <div className="flex items-center justify-between text-xs text-neutral-500">
               <span className="font-semibold text-neutral-800 flex items-center gap-1.5">
-                <span>Add task under</span>
+                <span>Add {createType === 'task' ? 'task' : 'event'} under</span>
                 <span className="font-bold flex items-center gap-1">
                   <span
                     className="w-2 h-2 rounded-full inline-block"
@@ -539,50 +585,134 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
                   </span>
                 </span>
               </span>
-            </div>
 
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-                placeholder="What task needs to be captured?"
-                className="flex-1 px-3 py-1.5 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
-              />
-              <button
-                type="submit"
-                disabled={!newTaskTitle.trim()}
-                className="px-3.5 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-md transition-colors disabled:opacity-40 flex items-center gap-1 shadow-subtle"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Task</span>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3 text-[11px] text-neutral-500 pt-1">
-              <div className="flex items-center gap-1">
-                <span>Priority:</span>
-                <select
-                  value={newTaskPriority}
-                  onChange={(e) => setNewTaskPriority(e.target.value as Priority)}
-                  className="bg-[#fafafa] border border-[#ebebeb] rounded px-1.5 py-0.5 text-xs"
+              {/* Toggle Task vs Event */}
+              <div className="flex items-center bg-[#ebebeb]/70 p-0.5 rounded-md border border-[#ebebeb]">
+                <button
+                  type="button"
+                  onClick={() => setCreateType('task')}
+                  className={`px-2.5 py-0.5 text-xs font-medium rounded transition-all ${
+                    createType === 'task'
+                      ? 'bg-white text-neutral-900 shadow-2xs font-semibold'
+                      : 'text-neutral-500 hover:text-neutral-900'
+                  }`}
                 >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <span>Due:</span>
-                <input
-                  type="date"
-                  value={newTaskDueDate}
-                  onChange={(e) => setNewTaskDueDate(e.target.value)}
-                  className="bg-[#fafafa] border border-[#ebebeb] rounded px-1.5 py-0.5 text-xs"
-                />
+                  Task
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreateType('event')}
+                  className={`px-2.5 py-0.5 text-xs font-medium rounded transition-all ${
+                    createType === 'event'
+                      ? 'bg-white text-neutral-900 shadow-2xs font-semibold'
+                      : 'text-neutral-500 hover:text-neutral-900'
+                  }`}
+                >
+                  Event
+                </button>
               </div>
             </div>
+
+            {createType === 'task' ? (
+              <>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newTaskTitle}
+                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    placeholder="What task needs to be captured?"
+                    className="flex-1 px-3 py-1.5 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newTaskTitle.trim()}
+                    className="px-3.5 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-md transition-colors disabled:opacity-40 flex items-center gap-1 shadow-subtle flex-shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Task</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3 text-[11px] text-neutral-500 pt-1">
+                  <div className="flex items-center gap-1">
+                    <span>Priority:</span>
+                    <select
+                      value={newTaskPriority}
+                      onChange={(e) => setNewTaskPriority(e.target.value as Priority)}
+                      className="bg-[#fafafa] border border-[#ebebeb] rounded px-1.5 py-0.5 text-xs"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <span>Due:</span>
+                    <input
+                      type="date"
+                      value={newTaskDueDate}
+                      onChange={(e) => setNewTaskDueDate(e.target.value)}
+                      className="bg-[#fafafa] border border-[#ebebeb] rounded px-1.5 py-0.5 text-xs"
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newEventTitle}
+                    onChange={(e) => setNewEventTitle(e.target.value)}
+                    placeholder="Event or meeting title..."
+                    className="flex-1 px-3 py-1.5 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newEventTitle.trim() || !newEventDate}
+                    className="px-3.5 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-md transition-colors disabled:opacity-40 flex items-center gap-1 shadow-subtle flex-shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Event</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-neutral-500 pt-0.5">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3 text-neutral-400 flex-shrink-0" />
+                    <input
+                      type="date"
+                      value={newEventDate}
+                      onChange={(e) => setNewEventDate(e.target.value)}
+                      className="w-full bg-[#fafafa] border border-[#ebebeb] rounded px-2 py-0.5 text-xs"
+                      required
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-neutral-400 flex-shrink-0" />
+                    <input
+                      type="text"
+                      value={newEventTime}
+                      onChange={(e) => setNewEventTime(e.target.value)}
+                      placeholder="Time (e.g. 14:00)"
+                      className="w-full bg-[#fafafa] border border-[#ebebeb] rounded px-2 py-0.5 text-xs"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-neutral-400 flex-shrink-0" />
+                    <input
+                      type="text"
+                      value={newEventLocation}
+                      onChange={(e) => setNewEventLocation(e.target.value)}
+                      placeholder="Location (e.g. Zoom)"
+                      className="w-full bg-[#fafafa] border border-[#ebebeb] rounded px-2 py-0.5 text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </form>
 
           {/* Tasks List (prioritizing active tasks) */}
@@ -699,6 +829,117 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
               </ul>
             )}
           </div>
+
+          {/* Events Section: Sitting below tasks */}
+          <div className="bg-white rounded-lg border border-[#ebebeb] shadow-subtle overflow-hidden">
+            <div className="p-3.5 bg-[#fafafa] border-b border-[#ebebeb] flex items-center justify-between text-xs text-neutral-600 font-medium">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-3.5 h-3.5 text-neutral-900" />
+                <span className="font-semibold text-neutral-900">Events</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-neutral-200 text-neutral-700">
+                  {filteredEvents.length}
+                </span>
+                <span className="text-[10px] text-neutral-400 font-normal hidden sm:inline">
+                  (calendar entries • time & location • cannot be assigned into plan mode)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCreateType('event')}
+                className="text-[11px] text-neutral-500 hover:text-neutral-900 flex items-center gap-1 transition-colors"
+              >
+                <Plus className="w-3 h-3" />
+                <span>New Event</span>
+              </button>
+            </div>
+
+            {filteredEvents.length === 0 ? (
+              <div className="py-8 text-center text-xs text-neutral-400">
+                <Calendar className="w-6 h-6 text-neutral-300 mx-auto mb-1.5" />
+                <p className="font-medium text-neutral-600">No events in this inbox</p>
+                <p className="text-[11px] text-neutral-400 mt-0.5">
+                  Switch to the Event tab above to create meetings and scheduled entries.
+                </p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-[#ebebeb]/70">
+                {filteredEvents.map((evt) => {
+                  const inboxInfo = inboxes.find((i) => i.id === evt.inboxId);
+                  return (
+                    <li
+                      key={evt.id}
+                      className="p-3.5 flex items-start justify-between gap-3 hover:bg-[#fafafa]/80 transition-colors group"
+                    >
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: inboxInfo?.color || '#171717' }}
+                          />
+                          <p className="text-xs font-semibold text-neutral-900 truncate">
+                            {evt.title}
+                          </p>
+                          {inboxInfo && (
+                            <span className="text-[10px] font-mono text-neutral-400 bg-neutral-100 px-1.5 py-0.2 rounded">
+                              {inboxInfo.name}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-neutral-500 font-mono">
+                          {evt.date && (
+                            <span className="inline-flex items-center gap-1 text-neutral-700">
+                              <Calendar className="w-3 h-3 text-neutral-400" />
+                              <span>{evt.date}</span>
+                            </span>
+                          )}
+                          {evt.time && (
+                            <span className="inline-flex items-center gap-1 text-neutral-900 font-medium">
+                              <Clock className="w-3 h-3 text-neutral-400" />
+                              <span>{evt.time}</span>
+                            </span>
+                          )}
+                          {evt.location && (
+                            <span className="inline-flex items-center gap-1 text-neutral-600">
+                              <MapPin className="w-3 h-3 text-neutral-400" />
+                              <span className="truncate">{evt.location}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {evt.description && (
+                          <p className="text-[11px] text-neutral-500 pt-0.5">
+                            {evt.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => setEditingEvent(evt)}
+                          className="p-1 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+                          title="Edit event"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Delete event "${evt.title}"?`)) {
+                              storage.deleteEvent(evt.id);
+                            }
+                          }}
+                          className="p-1 text-neutral-400 hover:text-red-500 rounded transition-colors"
+                          title="Delete event"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
 
@@ -707,6 +948,13 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
         task={editingTask}
         inboxes={inboxes}
         onClose={() => setEditingTask(null)}
+      />
+
+      {/* Event Edit Modal */}
+      <EventEditModal
+        event={editingEvent}
+        inboxes={inboxes}
+        onClose={() => setEditingEvent(null)}
       />
     </div>
   );

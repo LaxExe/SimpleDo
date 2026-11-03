@@ -57,6 +57,7 @@ export function App() {
         {currentPage === 'today' && (
           <TodayPage
             tasks={data.tasks}
+            events={data.events || []}
             habits={data.habits}
             inboxes={data.inboxes}
             dayPlans={data.dayPlans}
@@ -69,7 +70,11 @@ export function App() {
         )}
 
         {currentPage === 'inbox' && (
-          <InboxPage tasks={data.tasks} inboxes={data.inboxes} />
+          <InboxPage
+            tasks={data.tasks}
+            events={data.events || []}
+            inboxes={data.inboxes}
+          />
         )}
 
         {currentPage === 'tracker' && <TrackerPage habits={data.habits} />}

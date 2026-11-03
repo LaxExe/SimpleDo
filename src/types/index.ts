@@ -33,6 +33,17 @@ export interface Habit {
   createdAt: string;
 }
 
+export interface InboxEvent {
+  id: string;
+  title: string;
+  inboxId?: string; // Links event to an inbox
+  date: string; // YYYY-MM-DD
+  time?: string; // e.g. "14:30" or "2:30 PM"
+  location?: string; // e.g. "Room 101" or "Zoom"
+  description?: string;
+  createdAt: string;
+}
+
 export interface DayPlan {
   date: string; // YYYY-MM-DD
   notes?: string;
@@ -42,6 +53,7 @@ export interface DayPlan {
 
 export interface SimpleDoData {
   tasks: Task[];
+  events: InboxEvent[];
   inboxes: InboxGroup[];
   habits: Habit[];
   dayPlans: Record<string, DayPlan>; // Keyed by YYYY-MM-DD

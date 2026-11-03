@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Task, Habit, DayPlan } from '../types';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2, Flame, Circle } from 'lucide-react';
+import { Task, Habit, DayPlan, InboxEvent } from '../types';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2, Flame, Circle, Clock } from 'lucide-react';
 import { getTodayStr } from '../services/storage';
 
 interface CalendarViewProps {
   selectedDate: string; // YYYY-MM-DD
   onSelectDate: (date: string) => void;
   tasks: Task[];
+  events?: InboxEvent[];
   habits: Habit[];
   dayPlans: Record<string, DayPlan>;
   onDropTaskOnDate?: (taskId: string, targetDate: string) => void;
@@ -17,6 +18,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   selectedDate,
   onSelectDate,
   tasks,
+  events = [],
   dayPlans,
   onDropTaskOnDate,
   onDropHabitOnDate,
@@ -232,9 +234,25 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
                 {dateTasks.length > 3 && (
                   <div className="text-[9px] font-mono text-neutral-400 pl-1">
-                    +{dateTasks.length - 3} more
+                    +{dateTasks.length - 3} more tasks
                   </div>
                 )}
+
+                {/* Events Preview for this date */}
+                {events
+                  .filter((e) => e.date === cell.dateStr)
+                  .slice(0, 2)
+                  .map((evt) => (
+                    <div
+                      key={evt.id}
+                      className="text-[10px] truncate px-1.5 py-0.5 rounded flex items-center gap-1 bg-neutral-100 text-neutral-800 border border-neutral-200"
+                      title={`${evt.title} (${evt.time || 'All day'}${evt.location ? ` - ${evt.location}` : ''})`}
+                    >
+                      <Clock className="w-2.5 h-2.5 text-neutral-500 flex-shrink-0" />
+                      {evt.time && <span className="font-mono font-medium">{evt.time}</span>}
+                      <span className="truncate">{evt.title}</span>
+                    </div>
+                  ))}
               </div>
             </div>
           );
