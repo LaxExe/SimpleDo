@@ -255,12 +255,11 @@ export const storage = {
       if (t.id === id) {
         const total = t.totalParts || 4;
         const clamped = Math.max(0, Math.min(total, parts));
-        const completed = clamped >= total;
+        // Progress does NOT auto-complete tasks. Completion is strictly confirmed by clicking the circle.
         return {
           ...t,
           hasProgress: true, // Activated on click / set!
           completedParts: clamped,
-          completed,
         };
       }
       return t;
@@ -410,9 +409,16 @@ export const storage = {
         (id) => id !== taskId
       );
     }
-    data.tasks = data.tasks.map((t) =>
-      t.id === taskId && t.scheduledDate === date ? { ...t, scheduledDate: undefined } : t
-    );
+    data.tasks = data.tasks.map((t) => {
+      if (t.id === taskId) {
+        return {
+          ...t,
+          scheduledDate: t.scheduledDate === date ? undefined : t.scheduledDate,
+          dueDate: t.dueDate === date ? undefined : t.dueDate,
+        };
+      }
+      return t;
+    });
     this.save(data);
   },
 

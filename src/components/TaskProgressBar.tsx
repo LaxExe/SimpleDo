@@ -9,6 +9,7 @@ interface TaskProgressBarProps {
   completed?: boolean;
   size?: 'sm' | 'md';
   showLabel?: boolean;
+  inverted?: boolean;
 }
 
 export const TaskProgressBar: React.FC<TaskProgressBarProps> = ({
@@ -19,6 +20,7 @@ export const TaskProgressBar: React.FC<TaskProgressBarProps> = ({
   completed = false,
   size = 'md',
   showLabel = true,
+  inverted = false,
 }) => {
   // If progress is not enabled on this task, don't show the progress bar
   if (!hasProgress) {
@@ -66,7 +68,11 @@ export const TaskProgressBar: React.FC<TaskProgressBarProps> = ({
                 size === 'sm' ? 'w-4 h-1.5' : 'w-6 sm:w-7 h-2'
               } ${
                 isFilled
-                  ? 'bg-neutral-900 hover:bg-neutral-700 shadow-2xs'
+                  ? inverted
+                    ? 'bg-white hover:bg-white/80 shadow-2xs'
+                    : 'bg-neutral-900 hover:bg-neutral-700 shadow-2xs'
+                  : inverted
+                  ? 'bg-white/30 hover:bg-white/50'
                   : 'bg-neutral-200 hover:bg-neutral-300'
               }`}
               title={`Set progress to ${part}/${totalParts}`}
@@ -77,15 +83,15 @@ export const TaskProgressBar: React.FC<TaskProgressBarProps> = ({
 
       {/* Progress Label - strictly fractions, no % */}
       {showLabel && (
-        <div className="flex items-center gap-1.5 text-[10px] font-mono text-neutral-500">
-          <span className="font-semibold text-neutral-700">
+        <div className={`flex items-center gap-1.5 text-[10px] font-mono ${inverted ? 'text-white/90' : 'text-neutral-500'}`}>
+          <span className={`font-semibold ${inverted ? 'text-white' : 'text-neutral-700'}`}>
             {currentParts}/{totalParts}
           </span>
           {currentParts > 0 && !completed && (
             <button
               type="button"
               onClick={handleResetToZero}
-              className="text-neutral-400 hover:text-red-600 transition-colors ml-0.5"
+              className={`transition-colors ml-0.5 ${inverted ? 'text-white/70 hover:text-white' : 'text-neutral-400 hover:text-red-600'}`}
               title="Reset to 0/4"
             >
               ↺

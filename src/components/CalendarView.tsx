@@ -181,7 +181,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   onDropHabitOnDate(habitId, cell.dateStr);
                 }
               }}
-              className={`min-h-[90px] sm:min-h-[115px] p-2 flex flex-col justify-between cursor-pointer transition-all select-none group ${
+              className={`min-h-[110px] sm:min-h-[130px] h-full p-2 sm:p-2.5 flex flex-col justify-start gap-1.5 cursor-pointer transition-all select-none group ${
                 isSelected
                   ? 'bg-neutral-100/60 ring-2 ring-inset ring-neutral-900 z-10'
                   : isOver
@@ -192,7 +192,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               }`}
             >
               {/* Day Header: Number + Indicators */}
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center justify-between mb-0.5">
                 <span
                   className={`text-xs font-mono font-medium inline-flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
                     isToday
@@ -219,9 +219,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 </div>
               </div>
 
-              {/* Task Items Preview */}
-              <div className="space-y-1 flex-1 overflow-hidden">
-                {visibleDateTasks.slice(0, 3).map((task) => {
+              {/* Task Items & Events Preview (Expands to show all items naturally) */}
+              <div className="space-y-1 flex-1">
+                {visibleDateTasks.map((task) => {
                   const taskInbox = inboxes.find(
                     (i) => i.id === (task.inboxId || 'inbox-general')
                   );
@@ -267,16 +267,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   );
                 })}
 
-                {visibleDateTasks.length > 3 && (
-                  <div className="text-[9px] font-mono text-neutral-400 pl-1">
-                    +{visibleDateTasks.length - 3} more tasks
-                  </div>
-                )}
-
-                {/* Events Preview for this date (non-completed) */}
+                {/* Events Preview for this date - Fully colored with inbox color */}
                 {events
                   .filter((e) => e.date === cell.dateStr && !e.completed)
-                  .slice(0, 2)
                   .map((evt) => {
                     const evtInbox = inboxes.find(
                       (i) => i.id === (evt.inboxId || 'inbox-general')
@@ -284,15 +277,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     return (
                       <div
                         key={evt.id}
-                        className="text-[10px] truncate px-1.5 py-0.5 rounded flex items-center gap-1 bg-neutral-100 text-neutral-800 border border-neutral-200"
+                        style={{
+                          backgroundColor: evtInbox?.color || '#171717',
+                          color: '#ffffff',
+                        }}
+                        className="text-[10px] truncate px-1.5 py-0.5 rounded flex items-center gap-1 border border-transparent text-white font-medium shadow-2xs"
                         title={`${evt.title} (${evt.time || 'All day'}${evt.location ? ` - ${evt.location}` : ''})`}
                       >
-                        <span
-                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: evtInbox?.color || '#171717' }}
-                        />
-                        <Clock className="w-2.5 h-2.5 text-neutral-500 flex-shrink-0" />
-                        {evt.time && <span className="font-mono font-medium">{evt.time}</span>}
+                        <Clock className="w-2.5 h-2.5 text-white/90 flex-shrink-0" />
+                        {evt.time && <span className="font-mono text-white/90">{evt.time}</span>}
                         <span className="truncate">{evt.title}</span>
                       </div>
                     );

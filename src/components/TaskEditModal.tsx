@@ -39,7 +39,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
       scheduledDate: scheduledDate || undefined,
       hasProgress: hasProgress || completedParts > 0,
       completedParts,
-      completed: completedParts >= 4,
+      completed: task.completed,
     });
 
     onClose();

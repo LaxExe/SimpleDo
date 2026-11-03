@@ -124,7 +124,6 @@ export const TodayPage: React.FC<TodayPageProps> = ({
       priority: 'medium',
       inboxId: inboxes[0]?.id || 'inbox-general',
       scheduledDate: selectedDate,
-      dueDate: selectedDate,
     });
 
     setTaskInput('');
@@ -251,26 +250,45 @@ export const TodayPage: React.FC<TodayPageProps> = ({
               const taskInbox = inboxes.find(
                 (i) => i.id === (task.inboxId || 'inbox-general')
               );
+              const isDueToday = task.dueDate === selectedDate && !task.completed;
               return (
                 <div
                   key={task.id}
-                  className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-[#fafafa]/70 transition-colors group relative"
-                  style={{
-                    borderLeft: `4px solid ${taskInbox?.color || '#171717'}`,
-                  }}
+                  className={`p-4 sm:p-5 flex items-center justify-between gap-4 transition-colors group relative ${
+                    isDueToday
+                      ? 'border-b last:border-b-0 border-white/10 shadow-2xs'
+                      : 'hover:bg-[#fafafa]/70'
+                  }`}
+                  style={
+                    isDueToday
+                      ? {
+                          backgroundColor: taskInbox?.color || '#171717',
+                          color: '#ffffff',
+                        }
+                      : {
+                          borderLeft: `4px solid ${taskInbox?.color || '#171717'}`,
+                        }
+                  }
                 >
                   {/* Large Checkbox & Large Task Title */}
                   <div className="flex items-center gap-3.5 min-w-0 flex-1 pl-1">
                     <button
                       onClick={() => storage.toggleTask(task.id)}
                       className="flex-shrink-0 transition-transform active:scale-95"
+                      title="Click circle to confirm task completion"
                     >
                       {task.completed ? (
                         <div className="w-5 h-5 rounded-full bg-neutral-200 border-2 border-neutral-900 flex items-center justify-center">
                           <Check className="w-3 h-3 text-neutral-900 stroke-[3]" />
                         </div>
                       ) : (
-                        <div className="w-5 h-5 rounded-full border-2 border-neutral-300 hover:border-neutral-900 transition-colors" />
+                        <div
+                          className={`w-5 h-5 rounded-full border-2 transition-colors ${
+                            isDueToday
+                              ? 'border-white/80 hover:border-white'
+                              : 'border-neutral-300 hover:border-neutral-900'
+                          }`}
+                        />
                       )}
                     </button>
 
@@ -287,7 +305,9 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                         }}
                         className={`text-base sm:text-lg font-medium leading-snug truncate cursor-pointer hover:opacity-80 transition-opacity ${
                           task.completed
-                            ? 'line-through text-neutral-400'
+                            ? 'line-through opacity-60'
+                            : isDueToday
+                            ? 'text-white'
                             : 'text-neutral-900'
                         }`}
                         title={task.hasProgress ? 'Click to advance progress' : 'Click to enable progress'}
@@ -297,21 +317,28 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                       <div className="flex flex-wrap items-center gap-3 mt-1.5">
                         <div className="flex items-center gap-1.5">
                           <span
-                            className="w-2 h-2 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: taskInbox?.color || '#171717' }}
+                            className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                              isDueToday ? 'bg-white' : ''
+                            }`}
+                            style={!isDueToday ? { backgroundColor: taskInbox?.color || '#171717' } : undefined}
                           />
-                          <span className="text-xs font-mono text-neutral-500">
+                          <span
+                            className={`text-xs font-mono ${
+                              isDueToday ? 'text-white/80 font-medium' : 'text-neutral-500'
+                            }`}
+                          >
                             {taskInbox?.name || 'Inbox'}
                           </span>
                         </div>
 
-                        {/* 4-Part Progress Bar (only rendered when activated) */}
+                        {/* 4-Part Progress Bar (only rendered when activated; inverted when due card is fully colored) */}
                         <TaskProgressBar
                           taskId={task.id}
                           hasProgress={task.hasProgress}
                           completedParts={task.completedParts}
                           totalParts={task.totalParts || 4}
                           completed={task.completed}
+                          inverted={isDueToday}
                           size="md"
                         />
                       </div>
@@ -321,14 +348,24 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                 {/* Badges & Effortless Remove Action */}
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {task.priority === 'high' && (
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-red-50 text-red-600 font-medium border border-red-200/50">
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded font-medium border ${
+                        isDueToday
+                          ? 'bg-white/20 text-white border-white/30'
+                          : 'bg-red-50 text-red-600 border-red-200/50'
+                      }`}
+                    >
                       High
                     </span>
                   )}
 
                   <button
                     onClick={() => handleMoveToTomorrow(task.id)}
-                    className="text-xs text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 px-2 py-1 rounded transition-colors hidden sm:inline-flex"
+                    className={`text-xs px-2 py-1 rounded transition-colors hidden sm:inline-flex ${
+                      isDueToday
+                        ? 'text-white/80 hover:text-white hover:bg-white/10'
+                        : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100'
+                    }`}
                     title="Move to tomorrow"
                   >
                     → Tomorrow
@@ -336,7 +373,11 @@ export const TodayPage: React.FC<TodayPageProps> = ({
 
                   <button
                     onClick={() => setEditingTask(task)}
-                    className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+                    className={`p-1.5 rounded transition-colors ${
+                      isDueToday
+                        ? 'text-white/80 hover:text-white hover:bg-white/10'
+                        : 'text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100'
+                    }`}
                     title="Edit task"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
@@ -345,7 +386,11 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                   {/* Clear, easy remove button */}
                   <button
                     onClick={() => handleRemoveTaskFromDay(task.id)}
-                    className="inline-flex items-center gap-1 text-xs text-neutral-400 hover:text-red-600 hover:bg-red-50 px-2 py-1 rounded transition-colors"
+                    className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors ${
+                      isDueToday
+                        ? 'text-white/80 hover:text-white hover:bg-white/15'
+                        : 'text-neutral-400 hover:text-red-600 hover:bg-red-50'
+                    }`}
                     title="Remove from today"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -432,28 +477,29 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                   return (
                     <div
                       key={evt.id}
-                      className="p-3 bg-[#fafafa] rounded-lg border border-[#ebebeb] flex items-start justify-between gap-2 shadow-2xs"
+                      style={{
+                        backgroundColor: inboxInfo?.color || '#171717',
+                        color: '#ffffff',
+                      }}
+                      className="p-3 rounded-lg border border-transparent flex items-start justify-between gap-2 shadow-2xs text-white"
                     >
                       <div className="min-w-0 space-y-1">
                         <div className="flex items-center gap-2">
-                          <span
-                            className="w-2 h-2 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: inboxInfo?.color || '#171717' }}
-                          />
-                          <span className="text-xs font-semibold text-neutral-900 truncate">
+                          <span className="w-2 h-2 rounded-full flex-shrink-0 bg-white" />
+                          <span className="text-xs font-semibold text-white truncate">
                             {evt.title}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 text-[11px] text-neutral-500 font-mono">
+                        <div className="flex items-center gap-3 text-[11px] text-white/90 font-mono">
                           {evt.time && (
-                            <span className="flex items-center gap-1 text-neutral-800 font-medium">
-                              <Clock className="w-3 h-3 text-neutral-400" />
+                            <span className="flex items-center gap-1 text-white font-medium">
+                              <Clock className="w-3 h-3 text-white/80" />
                               <span>{evt.time}</span>
                             </span>
                           )}
                           {evt.location && (
-                            <span className="flex items-center gap-1 text-neutral-600 truncate">
-                              <MapPin className="w-3 h-3 text-neutral-400 flex-shrink-0" />
+                            <span className="flex items-center gap-1 text-white/90 truncate">
+                              <MapPin className="w-3 h-3 text-white/80 flex-shrink-0" />
                               <span className="truncate">{evt.location}</span>
                             </span>
                           )}
