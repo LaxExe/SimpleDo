@@ -342,7 +342,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
                 <div className="flex items-center gap-2.5 min-w-0 pr-2">
                   <span
                     className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm"
-                    style={{ backgroundColor: inbox.color || '#0068d6' }}
+                    style={{ backgroundColor: inbox.color || '#171717' }}
                   />
                   <div className="truncate">
                     <p className="truncate font-medium">{inbox.name}</p>
@@ -420,8 +420,8 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
                     style={{
                       backgroundColor:
                         selectedInboxId === 'all'
-                          ? inboxes[0]?.color || '#0068d6'
-                          : inboxes.find((i) => i.id === selectedInboxId)?.color || '#0068d6',
+                          ? inboxes[0]?.color || '#171717'
+                          : inboxes.find((i) => i.id === selectedInboxId)?.color || '#171717',
                     }}
                   />
                   <span>
@@ -531,7 +531,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
                               <span className="flex items-center gap-1">
                                 <span
                                   className="w-1.5 h-1.5 rounded-full"
-                                  style={{ backgroundColor: inboxInfo.color || '#0068d6' }}
+                                  style={{ backgroundColor: inboxInfo.color || '#171717' }}
                                 />
                                 {inboxInfo.name}
                               </span>

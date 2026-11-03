@@ -1,6 +1,6 @@
 import { SimpleDoData, Task, InboxGroup, Habit, DayPlan } from '../types';
 
-const STORAGE_KEY = 'simpledo_data_v2';
+const STORAGE_KEY = 'simpledo_data_v4';
 const EVENT_NAME = 'simpledo:change';
 
 export function getTodayStr(): string {
@@ -53,105 +53,16 @@ export function sortTasks(tasks: Task[]): Task[] {
 const defaultInboxes: InboxGroup[] = [
   {
     id: 'inbox-general',
-    name: 'General Inbox',
-    description: 'Catch-all for daily tasks and thoughts',
-    color: '#0068d6',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'inbox-work',
-    name: 'Work & Projects',
-    description: 'Professional milestones and deliverables',
-    color: '#0070f3',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'inbox-personal',
-    name: 'Personal & Health',
-    description: 'Personal errands, fitness, and home tasks',
-    color: '#10b981',
+    name: 'General',
+    description: 'Quick catch-all',
+    color: '#171717',
     createdAt: new Date().toISOString(),
   },
 ];
 
-const today = getTodayStr();
-
-const defaultTasks: Task[] = [
-  {
-    id: 'task-1',
-    title: 'Review today’s key priorities and roadmap',
-    completed: false,
-    priority: 'high',
-    category: 'Work & Projects',
-    inboxId: 'inbox-work',
-    dueDate: today,
-    scheduledDate: today,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-2',
-    title: 'Check and clear General Inbox items',
-    completed: true,
-    priority: 'medium',
-    category: 'General Inbox',
-    inboxId: 'inbox-general',
-    dueDate: today,
-    scheduledDate: today,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-3',
-    title: 'Plan tomorrow’s deep focus session',
-    completed: false,
-    priority: 'medium',
-    category: 'Work & Projects',
-    inboxId: 'inbox-work',
-    dueDate: today,
-    scheduledDate: today,
-    createdAt: new Date().toISOString(),
-  },
-];
-
-const defaultHabits: Habit[] = [
-  {
-    id: 'habit-1',
-    name: 'Drink 2L Water',
-    category: 'Health',
-    frequency: 'daily',
-    completedDates: [today],
-    streak: 1,
-    bestStreak: 1,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'habit-2',
-    name: 'Morning Deep Work (45m)',
-    category: 'Productivity',
-    frequency: 'daily',
-    completedDates: [],
-    streak: 0,
-    bestStreak: 5,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'habit-3',
-    name: 'Read 20 pages',
-    category: 'Learning',
-    frequency: 'daily',
-    completedDates: [today],
-    streak: 1,
-    bestStreak: 4,
-    createdAt: new Date().toISOString(),
-  },
-];
-
-const defaultDayPlans: Record<string, DayPlan> = {
-  [today]: {
-    date: today,
-    plannedTaskIds: ['task-1', 'task-2', 'task-3'],
-    plannedHabitIds: ['habit-1', 'habit-2', 'habit-3'],
-  },
-};
+const defaultTasks: Task[] = [];
+const defaultHabits: Habit[] = [];
+const defaultDayPlans: Record<string, DayPlan> = {};
 
 const defaultData: SimpleDoData = {
   tasks: defaultTasks,
@@ -331,7 +242,7 @@ export const storage = {
       id: `inbox-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       name: name.trim(),
       description: description?.trim(),
-      color: color || '#0068d6',
+      color: color || '#171717',
       createdAt: new Date().toISOString(),
     };
     data.inboxes.push(newInbox);
@@ -524,5 +435,14 @@ export const storage = {
       );
     });
     this.save(data);
+  },
+
+  resetAll() {
+    this.save({
+      tasks: [],
+      inboxes: defaultInboxes,
+      habits: [],
+      dayPlans: {},
+    });
   },
 };

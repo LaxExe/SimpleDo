@@ -6,7 +6,7 @@ import { TodayPage } from './pages/TodayPage';
 import { TasksPage } from './pages/TasksPage';
 import { InboxPage } from './pages/InboxPage';
 import { TrackerPage } from './pages/TrackerPage';
-import { getTodayStr } from './services/storage';
+import { storage, getTodayStr } from './services/storage';
 
 export function App() {
   const [currentPage, setCurrentPage] = useState<Page>('today');
@@ -107,6 +107,18 @@ export function App() {
               className="hover:text-neutral-900 transition-colors"
             >
               Tracker
+            </button>
+            <span className="text-neutral-300">|</span>
+            <button
+              onClick={() => {
+                if (confirm('Are you sure you want to reset and clear all data?')) {
+                  storage.resetAll();
+                }
+              }}
+              className="hover:text-red-500 transition-colors"
+              title="Reset and clear all data"
+            >
+              Reset Data
             </button>
           </div>
         </div>
