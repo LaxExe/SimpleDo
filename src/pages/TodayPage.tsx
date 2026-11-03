@@ -250,43 +250,54 @@ export const TodayPage: React.FC<TodayPageProps> = ({
               No tasks scheduled for today. Add or drag tasks below in the plan section.
             </div>
           ) : (
-            plannedTasks.map((task) => (
-              <div
-                key={task.id}
-                className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-[#fafafa]/70 transition-colors group"
-              >
-                {/* Large Checkbox & Large Task Title matching the uploaded image */}
-                <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                  <button
-                    onClick={() => storage.toggleTask(task.id)}
-                    className="flex-shrink-0 transition-transform active:scale-95"
-                  >
-                    {task.completed ? (
-                      <div className="w-5 h-5 rounded-full bg-neutral-200 border-2 border-neutral-900 flex items-center justify-center">
-                        <Check className="w-3 h-3 text-neutral-900 stroke-[3]" />
-                      </div>
-                    ) : (
-                      <div className="w-5 h-5 rounded-full border-2 border-neutral-300 hover:border-neutral-900 transition-colors" />
-                    )}
-                  </button>
-
-                  <div className="min-w-0">
-                    <p
-                      className={`text-base sm:text-lg font-medium leading-snug truncate ${
-                        task.completed
-                          ? 'line-through text-neutral-400'
-                          : 'text-neutral-900'
-                      }`}
+            plannedTasks.map((task) => {
+              const taskInbox = inboxes.find(
+                (i) => i.id === (task.inboxId || 'inbox-general')
+              );
+              return (
+                <div
+                  key={task.id}
+                  className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-[#fafafa]/70 transition-colors group relative"
+                  style={{
+                    borderLeft: `4px solid ${taskInbox?.color || '#171717'}`,
+                  }}
+                >
+                  {/* Large Checkbox & Large Task Title */}
+                  <div className="flex items-center gap-3.5 min-w-0 flex-1 pl-1">
+                    <button
+                      onClick={() => storage.toggleTask(task.id)}
+                      className="flex-shrink-0 transition-transform active:scale-95"
                     >
-                      {task.title}
-                    </p>
-                    {task.category && (
-                      <span className="text-xs font-mono text-neutral-400">
-                        {task.category}
-                      </span>
-                    )}
+                      {task.completed ? (
+                        <div className="w-5 h-5 rounded-full bg-neutral-200 border-2 border-neutral-900 flex items-center justify-center">
+                          <Check className="w-3 h-3 text-neutral-900 stroke-[3]" />
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border-2 border-neutral-300 hover:border-neutral-900 transition-colors" />
+                      )}
+                    </button>
+
+                    <div className="min-w-0">
+                      <p
+                        className={`text-base sm:text-lg font-medium leading-snug truncate ${
+                          task.completed
+                            ? 'line-through text-neutral-400'
+                            : 'text-neutral-900'
+                        }`}
+                      >
+                        {task.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span
+                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: taskInbox?.color || '#171717' }}
+                        />
+                        <span className="text-xs font-mono text-neutral-400">
+                          {taskInbox?.name || task.category || 'General'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
 
                 {/* Badges & Effortless Remove Action */}
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -323,8 +334,9 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                   </button>
                 </div>
               </div>
-            ))
-          )}
+            );
+          })
+        )}
 
           {/* Planned Habits Row for Today */}
           {plannedHabits.length > 0 && (
@@ -394,9 +406,6 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                     {selectedDateEvents.length}
                   </span>
                 </div>
-                <span className="text-[11px] text-neutral-400 font-normal normal-case">
-                  Calendar entries (time & location)
-                </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {selectedDateEvents.map((evt) => {
@@ -637,6 +646,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
           onSelectDate={setSelectedDate}
           tasks={tasks}
           events={events}
+          inboxes={inboxes}
           habits={habits}
           dayPlans={dayPlans}
           onDropTaskOnDate={handleDropOnCalendarDate}

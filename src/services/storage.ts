@@ -324,6 +324,15 @@ export const storage = {
     this.save(data);
   },
 
+  toggleEvent(id: string) {
+    const data = this.load();
+    if (!data.events) data.events = [];
+    data.events = data.events.map((e) =>
+      e.id === id ? { ...e, completed: !e.completed } : e
+    );
+    this.save(data);
+  },
+
   // ---------------- Day Plans & Drag/Drop Scheduling ----------------
   getDayPlan(date: string): DayPlan {
     const data = this.load();

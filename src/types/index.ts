@@ -41,6 +41,7 @@ export interface InboxEvent {
   time?: string; // e.g. "14:30" or "2:30 PM"
   location?: string; // e.g. "Room 101" or "Zoom"
   description?: string;
+  completed?: boolean;
   createdAt: string;
 }
 

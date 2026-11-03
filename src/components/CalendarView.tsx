@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Task, Habit, DayPlan, InboxEvent } from '../types';
+import { Task, Habit, DayPlan, InboxEvent, InboxGroup } from '../types';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2, Flame, Circle, Clock } from 'lucide-react';
 import { getTodayStr } from '../services/storage';
 
@@ -8,6 +8,7 @@ interface CalendarViewProps {
   onSelectDate: (date: string) => void;
   tasks: Task[];
   events?: InboxEvent[];
+  inboxes?: InboxGroup[];
   habits: Habit[];
   dayPlans: Record<string, DayPlan>;
   onDropTaskOnDate?: (taskId: string, targetDate: string) => void;
@@ -19,6 +20,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onSelectDate,
   tasks,
   events = [],
+  inboxes = [],
   dayPlans,
   onDropTaskOnDate,
   onDropHabitOnDate,
@@ -148,7 +150,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           const isToday = cell.dateStr === todayStr;
           const isOver = dragOverDate === cell.dateStr;
 
-          const dateTasks = tasksByDate[cell.dateStr] || [];
+          // Filter completed tasks on calendar: only show if due date is set beyond today
+          const allDateTasks = tasksByDate[cell.dateStr] || [];
+          const visibleDateTasks = allDateTasks.filter((task) => {
+            if (!task.completed) return true;
+            return Boolean(task.dueDate && task.dueDate > todayStr);
+          });
           const datePlan = dayPlans[cell.dateStr];
           const plannedHabitsCount = datePlan?.plannedHabitIds?.length || 0;
 
@@ -212,47 +219,66 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
               {/* Task Items Preview */}
               <div className="space-y-1 flex-1 overflow-hidden">
-                {dateTasks.slice(0, 3).map((task) => (
-                  <div
-                    key={task.id}
-                    className={`text-[10px] truncate px-1.5 py-0.5 rounded flex items-center gap-1 border transition-colors ${
-                      task.completed
-                        ? 'bg-neutral-100 text-neutral-400 border-neutral-200 line-through'
-                        : task.priority === 'high'
-                        ? 'bg-red-50 text-red-700 border-red-200/60 font-medium'
-                        : 'bg-[#fafafa] text-neutral-800 border-[#ebebeb]'
-                    }`}
-                  >
-                    {task.completed ? (
-                      <CheckCircle2 className="w-2.5 h-2.5 text-neutral-900 flex-shrink-0" />
-                    ) : (
-                      <Circle className="w-2.5 h-2.5 text-neutral-400 flex-shrink-0" />
-                    )}
-                    <span className="truncate">{task.title}</span>
-                  </div>
-                ))}
+                {visibleDateTasks.slice(0, 3).map((task) => {
+                  const taskInbox = inboxes.find(
+                    (i) => i.id === (task.inboxId || 'inbox-general')
+                  );
+                  return (
+                    <div
+                      key={task.id}
+                      className={`text-[10px] truncate px-1.5 py-0.5 rounded flex items-center gap-1 border transition-colors ${
+                        task.completed
+                          ? 'bg-neutral-100 text-neutral-400 border-neutral-200 line-through'
+                          : task.priority === 'high'
+                          ? 'bg-red-50 text-red-700 border-red-200/60 font-medium'
+                          : 'bg-[#fafafa] text-neutral-800 border-[#ebebeb]'
+                      }`}
+                    >
+                      {/* Little bit of inbox color */}
+                      <span
+                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: taskInbox?.color || '#171717' }}
+                      />
+                      {task.completed ? (
+                        <CheckCircle2 className="w-2.5 h-2.5 text-neutral-900 flex-shrink-0" />
+                      ) : (
+                        <Circle className="w-2.5 h-2.5 text-neutral-400 flex-shrink-0" />
+                      )}
+                      <span className="truncate">{task.title}</span>
+                    </div>
+                  );
+                })}
 
-                {dateTasks.length > 3 && (
+                {visibleDateTasks.length > 3 && (
                   <div className="text-[9px] font-mono text-neutral-400 pl-1">
-                    +{dateTasks.length - 3} more tasks
+                    +{visibleDateTasks.length - 3} more tasks
                   </div>
                 )}
 
-                {/* Events Preview for this date */}
+                {/* Events Preview for this date (non-completed) */}
                 {events
-                  .filter((e) => e.date === cell.dateStr)
+                  .filter((e) => e.date === cell.dateStr && !e.completed)
                   .slice(0, 2)
-                  .map((evt) => (
-                    <div
-                      key={evt.id}
-                      className="text-[10px] truncate px-1.5 py-0.5 rounded flex items-center gap-1 bg-neutral-100 text-neutral-800 border border-neutral-200"
-                      title={`${evt.title} (${evt.time || 'All day'}${evt.location ? ` - ${evt.location}` : ''})`}
-                    >
-                      <Clock className="w-2.5 h-2.5 text-neutral-500 flex-shrink-0" />
-                      {evt.time && <span className="font-mono font-medium">{evt.time}</span>}
-                      <span className="truncate">{evt.title}</span>
-                    </div>
-                  ))}
+                  .map((evt) => {
+                    const evtInbox = inboxes.find(
+                      (i) => i.id === (evt.inboxId || 'inbox-general')
+                    );
+                    return (
+                      <div
+                        key={evt.id}
+                        className="text-[10px] truncate px-1.5 py-0.5 rounded flex items-center gap-1 bg-neutral-100 text-neutral-800 border border-neutral-200"
+                        title={`${evt.title} (${evt.time || 'All day'}${evt.location ? ` - ${evt.location}` : ''})`}
+                      >
+                        <span
+                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: evtInbox?.color || '#171717' }}
+                        />
+                        <Clock className="w-2.5 h-2.5 text-neutral-500 flex-shrink-0" />
+                        {evt.time && <span className="font-mono font-medium">{evt.time}</span>}
+                        <span className="truncate">{evt.title}</span>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           );

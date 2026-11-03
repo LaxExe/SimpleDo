@@ -15,11 +15,11 @@ import {
   Edit2, 
   Check, 
   GripVertical, 
-  ChevronUp, 
   ChevronDown,
   Calendar,
   Clock,
-  MapPin
+  MapPin,
+  Archive
 } from 'lucide-react';
 
 interface InboxPageProps {
@@ -49,6 +49,9 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
   // Modals state
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingEvent, setEditingEvent] = useState<InboxEvent | null>(null);
+
+  // Archive accordion state (collapsed by default)
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false);
 
   // New Inbox creation
   const [isCreatingInbox, setIsCreatingInbox] = useState(false);
@@ -182,12 +185,16 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
   });
 
   const filteredTasks = sortTasks(rawFilteredTasks);
+  const activeTasks = filteredTasks.filter((t) => !t.completed);
+  const completedTasks = filteredTasks.filter((t) => t.completed);
 
   // Filter events based on selected inbox
   const filteredEvents = events.filter((e) => {
     if (selectedInboxId === 'all') return true;
     return (e.inboxId || 'inbox-general') === selectedInboxId;
   });
+  const activeEvents = filteredEvents.filter((e) => !e.completed);
+  const completedEvents = filteredEvents.filter((e) => e.completed);
 
   const handleAddEvent = (e: React.FormEvent) => {
     e.preventDefault();
@@ -394,12 +401,9 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
         {/* Left Column: Inbox List (4 cols) */}
         <div className="md:col-span-4 space-y-2">
-          <div className="flex items-center justify-between px-1 mb-2">
+          <div className="px-1 mb-2">
             <span className="text-xs font-medium uppercase tracking-wider text-neutral-400">
               Your Inboxes
-            </span>
-            <span className="text-[10px] text-neutral-400 font-mono">
-              drag or arrows to reorder
             </span>
           </div>
 
@@ -478,7 +482,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1.5 flex-shrink-0">
                   <span
                     className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono mr-0.5 ${
                       isSelected ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-600'
@@ -486,40 +490,6 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
                   >
                     {inboxTasks.length}
                   </span>
-
-                  {/* Up / Down Reorder Arrows */}
-                  <div className="flex items-center opacity-70 group-hover:opacity-100 transition-opacity">
-                    <button
-                      type="button"
-                      disabled={index === 0}
-                      onClick={(e) => handleMoveInbox(index, index - 1, e)}
-                      className={`p-0.5 rounded transition-colors ${
-                        index === 0
-                          ? 'opacity-20 cursor-not-allowed'
-                          : isSelected
-                          ? 'hover:bg-white/20 text-white/80'
-                          : 'hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900'
-                      }`}
-                      title="Move inbox up"
-                    >
-                      <ChevronUp className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={index === inboxes.length - 1}
-                      onClick={(e) => handleMoveInbox(index, index + 1, e)}
-                      className={`p-0.5 rounded transition-colors ${
-                        index === inboxes.length - 1
-                          ? 'opacity-20 cursor-not-allowed'
-                          : isSelected
-                          ? 'hover:bg-white/20 text-white/80'
-                          : 'hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900'
-                      }`}
-                      title="Move inbox down"
-                    >
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
 
                   {/* Customize Color / Edit Inbox */}
                   <button
@@ -715,26 +685,23 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
             )}
           </form>
 
-          {/* Tasks List (prioritizing active tasks) */}
+          {/* Tasks List (only active tasks shown here) */}
           <div className="bg-white rounded-lg border border-[#ebebeb] shadow-subtle overflow-hidden">
             <div className="p-3.5 bg-[#fafafa] border-b border-[#ebebeb] flex items-center justify-between text-xs text-neutral-600 font-medium">
-              <span>Tasks ({filteredTasks.length})</span>
-              <span className="text-[11px] text-neutral-400 font-mono">
-                {filteredTasks.filter((t) => t.completed).length} completed
-              </span>
+              <span>Tasks ({activeTasks.length})</span>
             </div>
 
-            {filteredTasks.length === 0 ? (
+            {activeTasks.length === 0 ? (
               <div className="py-12 text-center">
                 <Inbox className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
-                <p className="text-xs font-medium text-neutral-700">No tasks in this inbox</p>
+                <p className="text-xs font-medium text-neutral-700">No active tasks in this inbox</p>
                 <p className="text-xs text-neutral-400 mt-0.5">
                   Type above to add tasks directly into this inbox.
                 </p>
               </div>
             ) : (
               <ul className="divide-y divide-[#ebebeb]/70">
-                {filteredTasks.map((task) => {
+                {activeTasks.map((task) => {
                   const inboxInfo = inboxes.find((i) => i.id === task.inboxId);
                   const plannedToday = isPlannedForToday(task);
 
@@ -747,21 +714,12 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
                         <button
                           onClick={() => storage.toggleTask(task.id)}
                           className="flex-shrink-0"
+                          title="Complete task"
                         >
-                          {task.completed ? (
-                            <CheckCircle2 className="w-4 h-4 text-neutral-900 fill-neutral-200" />
-                          ) : (
-                            <Circle className="w-4 h-4 text-neutral-300 hover:text-neutral-500" />
-                          )}
+                          <Circle className="w-4 h-4 text-neutral-300 hover:text-neutral-500" />
                         </button>
                         <div className="min-w-0">
-                          <p
-                            className={`text-xs font-medium truncate ${
-                              task.completed
-                                ? 'line-through text-neutral-400'
-                                : 'text-neutral-900'
-                            }`}
-                          >
+                          <p className="text-xs font-medium truncate text-neutral-900">
                             {task.title}
                           </p>
                           <div className="flex items-center gap-2 text-[10px] text-neutral-400 font-mono mt-0.5">
@@ -788,7 +746,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
                           </span>
                         )}
 
-                        {/* Today Button: Green Checkmark when added to today, Yellow Sun when not */}
+                        {/* Today Button: Green Checkmark when added to today, Sun when not */}
                         <button
                           onClick={() => handleToggleToday(task.id, plannedToday)}
                           className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded transition-all ${
@@ -837,10 +795,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
                 <Calendar className="w-3.5 h-3.5 text-neutral-900" />
                 <span className="font-semibold text-neutral-900">Events</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-neutral-200 text-neutral-700">
-                  {filteredEvents.length}
-                </span>
-                <span className="text-[10px] text-neutral-400 font-normal hidden sm:inline">
-                  (calendar entries • time & location • cannot be assigned into plan mode)
+                  {activeEvents.length}
                 </span>
               </div>
               <button
@@ -853,7 +808,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
               </button>
             </div>
 
-            {filteredEvents.length === 0 ? (
+            {activeEvents.length === 0 ? (
               <div className="py-8 text-center text-xs text-neutral-400">
                 <Calendar className="w-6 h-6 text-neutral-300 mx-auto mb-1.5" />
                 <p className="font-medium text-neutral-600">No events in this inbox</p>
@@ -863,55 +818,65 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
               </div>
             ) : (
               <ul className="divide-y divide-[#ebebeb]/70">
-                {filteredEvents.map((evt) => {
+                {activeEvents.map((evt) => {
                   const inboxInfo = inboxes.find((i) => i.id === evt.inboxId);
                   return (
                     <li
                       key={evt.id}
                       className="p-3.5 flex items-start justify-between gap-3 hover:bg-[#fafafa]/80 transition-colors group"
                     >
-                      <div className="space-y-1 min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="w-2 h-2 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: inboxInfo?.color || '#171717' }}
-                          />
-                          <p className="text-xs font-semibold text-neutral-900 truncate">
-                            {evt.title}
-                          </p>
-                          {inboxInfo && (
-                            <span className="text-[10px] font-mono text-neutral-400 bg-neutral-100 px-1.5 py-0.2 rounded">
-                              {inboxInfo.name}
-                            </span>
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                        <button
+                          onClick={() => storage.toggleEvent(evt.id)}
+                          className="flex-shrink-0 mt-0.5"
+                          title="Complete event"
+                        >
+                          <Circle className="w-4 h-4 text-neutral-300 hover:text-neutral-500" />
+                        </button>
+
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-2 h-2 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: inboxInfo?.color || '#171717' }}
+                            />
+                            <p className="text-xs font-semibold text-neutral-900 truncate">
+                              {evt.title}
+                            </p>
+                            {inboxInfo && (
+                              <span className="text-[10px] font-mono text-neutral-400 bg-neutral-100 px-1.5 py-0.2 rounded">
+                                {inboxInfo.name}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-neutral-500 font-mono">
+                            {evt.date && (
+                              <span className="inline-flex items-center gap-1 text-neutral-700">
+                                <Calendar className="w-3 h-3 text-neutral-400" />
+                                <span>{evt.date}</span>
+                              </span>
+                            )}
+                            {evt.time && (
+                              <span className="inline-flex items-center gap-1 text-neutral-900 font-medium">
+                                <Clock className="w-3 h-3 text-neutral-400" />
+                                <span>{evt.time}</span>
+                              </span>
+                            )}
+                            {evt.location && (
+                              <span className="inline-flex items-center gap-1 text-neutral-600">
+                                <MapPin className="w-3 h-3 text-neutral-400" />
+                                <span className="truncate">{evt.location}</span>
+                              </span>
+                            )}
+                          </div>
+
+                          {evt.description && (
+                            <p className="text-[11px] text-neutral-500 pt-0.5">
+                              {evt.description}
+                            </p>
                           )}
                         </div>
-
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-neutral-500 font-mono">
-                          {evt.date && (
-                            <span className="inline-flex items-center gap-1 text-neutral-700">
-                              <Calendar className="w-3 h-3 text-neutral-400" />
-                              <span>{evt.date}</span>
-                            </span>
-                          )}
-                          {evt.time && (
-                            <span className="inline-flex items-center gap-1 text-neutral-900 font-medium">
-                              <Clock className="w-3 h-3 text-neutral-400" />
-                              <span>{evt.time}</span>
-                            </span>
-                          )}
-                          {evt.location && (
-                            <span className="inline-flex items-center gap-1 text-neutral-600">
-                              <MapPin className="w-3 h-3 text-neutral-400" />
-                              <span className="truncate">{evt.location}</span>
-                            </span>
-                          )}
-                        </div>
-
-                        {evt.description && (
-                          <p className="text-[11px] text-neutral-500 pt-0.5">
-                            {evt.description}
-                          </p>
-                        )}
                       </div>
 
                       <div className="flex items-center gap-1.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -938,6 +903,131 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
                   );
                 })}
               </ul>
+            )}
+          </div>
+
+          {/* Archive Section: Collapsed by default, no completed counter */}
+          <div className="bg-white rounded-lg border border-[#ebebeb] shadow-subtle overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setIsArchiveOpen(!isArchiveOpen)}
+              className="w-full p-3.5 bg-[#fafafa] hover:bg-neutral-100/70 flex items-center justify-between text-xs text-neutral-700 font-medium transition-colors select-none"
+            >
+              <div className="flex items-center gap-2">
+                <Archive className="w-3.5 h-3.5 text-neutral-500" />
+                <span className="font-semibold text-neutral-900">Archive</span>
+              </div>
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-200 ${
+                  isArchiveOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {isArchiveOpen && (
+              <div className="border-t border-[#ebebeb] divide-y divide-[#ebebeb]/70">
+                {completedTasks.length === 0 && completedEvents.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-neutral-400">
+                    Archive is empty for this inbox.
+                  </div>
+                ) : (
+                  <>
+                    {/* Completed Tasks */}
+                    {completedTasks.map((task) => {
+                      const inboxInfo = inboxes.find((i) => i.id === task.inboxId);
+                      return (
+                        <div
+                          key={task.id}
+                          className="p-3.5 flex items-center justify-between gap-3 bg-[#fafafa]/40 hover:bg-[#fafafa] transition-colors group"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <button
+                              onClick={() => storage.toggleTask(task.id)}
+                              className="flex-shrink-0"
+                              title="Restore to active tasks"
+                            >
+                              <CheckCircle2 className="w-4 h-4 text-neutral-900 fill-neutral-200" />
+                            </button>
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium truncate line-through text-neutral-400">
+                                {task.title}
+                              </p>
+                              {inboxInfo && (
+                                <span className="text-[10px] text-neutral-400 font-mono">
+                                  {inboxInfo.name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                              onClick={() => storage.toggleTask(task.id)}
+                              className="text-[11px] text-neutral-400 hover:text-neutral-900 transition-colors"
+                              title="Uncomplete and restore"
+                            >
+                              Restore
+                            </button>
+                            <button
+                              onClick={() => storage.deleteTask(task.id)}
+                              className="p-1 text-neutral-400 hover:text-red-500 rounded transition-colors"
+                              title="Delete permanently"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Completed Events */}
+                    {completedEvents.map((evt) => {
+                      const inboxInfo = inboxes.find((i) => i.id === evt.inboxId);
+                      return (
+                        <div
+                          key={evt.id}
+                          className="p-3.5 flex items-center justify-between gap-3 bg-[#fafafa]/40 hover:bg-[#fafafa] transition-colors group"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <button
+                              onClick={() => storage.toggleEvent(evt.id)}
+                              className="flex-shrink-0"
+                              title="Restore to active events"
+                            >
+                              <CheckCircle2 className="w-4 h-4 text-neutral-900 fill-neutral-200" />
+                            </button>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold truncate line-through text-neutral-400">
+                                {evt.title}
+                              </p>
+                              <div className="flex items-center gap-2 text-[10px] text-neutral-400 font-mono">
+                                {evt.date && <span>{evt.date}</span>}
+                                {evt.time && <span>• {evt.time}</span>}
+                                {inboxInfo && <span>• {inboxInfo.name}</span>}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                              onClick={() => storage.toggleEvent(evt.id)}
+                              className="text-[11px] text-neutral-400 hover:text-neutral-900 transition-colors"
+                              title="Uncomplete and restore"
+                            >
+                              Restore
+                            </button>
+                            <button
+                              onClick={() => storage.deleteEvent(evt.id)}
+                              className="p-1 text-neutral-400 hover:text-red-500 rounded transition-colors"
+                              title="Delete permanently"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>
