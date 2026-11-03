@@ -12,7 +12,10 @@ import {
   Layers,
   Sun,
   Edit2,
-  Check
+  Check,
+  GripVertical,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 
 interface InboxPageProps {
@@ -40,6 +43,50 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
 
   // Task editing
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  // Inbox reordering state
+  const [draggedInboxIndex, setDraggedInboxIndex] = useState<number | null>(null);
+  const [dragOverInboxIndex, setDragOverInboxIndex] = useState<number | null>(null);
+
+  const handleMoveInbox = (fromIndex: number, toIndex: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (toIndex < 0 || toIndex >= inboxes.length || fromIndex === toIndex) return;
+    const updated = [...inboxes];
+    const [moved] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, moved);
+    storage.reorderInboxes(updated);
+  };
+
+  const handleInboxDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('text/plain', `inbox-reorder:${index}`);
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedInboxIndex(index);
+  };
+
+  const handleInboxDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedInboxIndex !== null && draggedInboxIndex !== index) {
+      setDragOverInboxIndex(index);
+    }
+  };
+
+  const handleInboxDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    const data = e.dataTransfer.getData('text/plain');
+    if (data && data.startsWith('inbox-reorder:')) {
+      const sourceIndex = parseInt(data.replace('inbox-reorder:', ''), 10);
+      if (!isNaN(sourceIndex) && sourceIndex !== targetIndex) {
+        handleMoveInbox(sourceIndex, targetIndex);
+      }
+    }
+    setDraggedInboxIndex(null);
+    setDragOverInboxIndex(null);
+  };
+
+  const handleInboxDragEnd = () => {
+    setDraggedInboxIndex(null);
+    setDragOverInboxIndex(null);
+  };
 
   const todayStr = getTodayStr();
   const todayPlan = storage.getDayPlan(todayStr);
@@ -301,8 +348,13 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
         {/* Left Column: Inbox List (4 cols) */}
         <div className="md:col-span-4 space-y-2">
-          <div className="text-xs font-medium uppercase tracking-wider text-neutral-400 px-1 mb-2">
-            Your Inboxes
+          <div className="flex items-center justify-between px-1 mb-2">
+            <span className="text-xs font-medium uppercase tracking-wider text-neutral-400">
+              Your Inboxes
+            </span>
+            <span className="text-[10px] text-neutral-400 font-mono">
+              drag or arrows to reorder
+            </span>
           </div>
 
           <button
@@ -326,22 +378,44 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
             </span>
           </button>
 
-          {inboxes.map((inbox) => {
+          {inboxes.map((inbox, index) => {
             const inboxTasks = tasks.filter((t) => (t.inboxId || 'inbox-general') === inbox.id);
             const isSelected = selectedInboxId === inbox.id;
+            const isDragging = draggedInboxIndex === index;
+            const isDragOver = dragOverInboxIndex === index;
+
             return (
               <div
                 key={inbox.id}
+                draggable
+                onDragStart={(e) => handleInboxDragStart(e, index)}
+                onDragOver={(e) => handleInboxDragOver(e, index)}
+                onDrop={(e) => handleInboxDrop(e, index)}
+                onDragEnd={handleInboxDragEnd}
                 onClick={() => setSelectedInboxId(inbox.id)}
-                className={`group cursor-pointer flex items-center justify-between p-3 rounded-lg border text-left text-xs transition-all ${
+                className={`group cursor-pointer flex items-center justify-between p-2.5 rounded-lg border text-left text-xs transition-all ${
                   isSelected
                     ? 'bg-neutral-900 text-white border-neutral-900 font-medium shadow-sm'
                     : 'bg-white hover:bg-[#fafafa] text-neutral-800 border-[#ebebeb]'
+                } ${isDragging ? 'opacity-40 scale-[0.98]' : ''} ${
+                  isDragOver ? 'ring-2 ring-neutral-400 border-neutral-400' : ''
                 }`}
               >
-                <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                <div className="flex items-center gap-2 min-w-0 pr-1">
+                  {/* Drag Handle */}
                   <span
-                    className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm"
+                    className={`cursor-grab active:cursor-grabbing p-0.5 rounded transition-colors ${
+                      isSelected
+                        ? 'text-white/40 hover:text-white'
+                        : 'text-neutral-300 hover:text-neutral-600'
+                    }`}
+                    title="Drag to rearrange order"
+                  >
+                    <GripVertical className="w-3.5 h-3.5" />
+                  </span>
+
+                  <span
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
                     style={{ backgroundColor: inbox.color || '#171717' }}
                   />
                   <div className="truncate">
@@ -358,14 +432,48 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, inboxes }) => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono mr-0.5 ${
                       isSelected ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-600'
                     }`}
                   >
                     {inboxTasks.length}
                   </span>
+
+                  {/* Up / Down Reorder Arrows */}
+                  <div className="flex items-center opacity-70 group-hover:opacity-100 transition-opacity">
+                    <button
+                      type="button"
+                      disabled={index === 0}
+                      onClick={(e) => handleMoveInbox(index, index - 1, e)}
+                      className={`p-0.5 rounded transition-colors ${
+                        index === 0
+                          ? 'opacity-20 cursor-not-allowed'
+                          : isSelected
+                          ? 'hover:bg-white/20 text-white/80'
+                          : 'hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900'
+                      }`}
+                      title="Move inbox up"
+                    >
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === inboxes.length - 1}
+                      onClick={(e) => handleMoveInbox(index, index + 1, e)}
+                      className={`p-0.5 rounded transition-colors ${
+                        index === inboxes.length - 1
+                          ? 'opacity-20 cursor-not-allowed'
+                          : isSelected
+                          ? 'hover:bg-white/20 text-white/80'
+                          : 'hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900'
+                      }`}
+                      title="Move inbox down"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
 
                   {/* Customize Color / Edit Inbox */}
                   <button

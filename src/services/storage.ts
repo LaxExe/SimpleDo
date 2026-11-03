@@ -265,6 +265,27 @@ export const storage = {
     this.save(data);
   },
 
+  reorderInboxes(newInboxes: InboxGroup[]) {
+    const data = this.load();
+    data.inboxes = newInboxes;
+    this.save(data);
+  },
+
+  moveInbox(fromIndex: number, toIndex: number) {
+    const data = this.load();
+    if (
+      fromIndex < 0 ||
+      fromIndex >= data.inboxes.length ||
+      toIndex < 0 ||
+      toIndex >= data.inboxes.length
+    ) {
+      return;
+    }
+    const [moved] = data.inboxes.splice(fromIndex, 1);
+    data.inboxes.splice(toIndex, 0, moved);
+    this.save(data);
+  },
+
   // ---------------- Day Plans & Drag/Drop Scheduling ----------------
   getDayPlan(date: string): DayPlan {
     const data = this.load();
