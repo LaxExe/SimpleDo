@@ -150,6 +150,7 @@ export const storage = {
       if (parsed.tasks) {
         parsed.tasks = parsed.tasks.map((t: Task) => ({
           ...t,
+          hasProgress: Boolean(t.hasProgress),
           totalParts: t.totalParts || 4,
           completedParts: t.completed ? (t.totalParts || 4) : (t.completedParts ?? 0),
         }));
@@ -173,6 +174,7 @@ export const storage = {
   addTask(task: Omit<Task, 'id' | 'createdAt'>) {
     const data = this.load();
     const newTask: Task = {
+      hasProgress: false,
       totalParts: 4,
       completedParts: 0,
       ...task,
@@ -256,6 +258,7 @@ export const storage = {
         const completed = clamped >= total;
         return {
           ...t,
+          hasProgress: true, // Activated on click / set!
           completedParts: clamped,
           completed,
         };

@@ -93,14 +93,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       <div className="p-4 sm:px-6 flex items-center justify-between border-b border-[#ebebeb] bg-[#fafafa]">
         <div className="flex items-center gap-2.5">
           <CalendarIcon className="w-5 h-5 text-neutral-900" />
-          <div>
-            <h2 className="text-base sm:text-lg font-semibold text-neutral-900 tracking-tight">
-              {monthName}
-            </h2>
-            <p className="text-xs text-neutral-500 hidden sm:block">
-              Click a date to plan, or drag tasks and habits onto any day.
-            </p>
-          </div>
+          <h2 className="text-base sm:text-lg font-semibold text-neutral-900 tracking-tight">
+            {monthName}
+          </h2>
         </div>
 
         <div className="flex items-center gap-2">
@@ -211,16 +206,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 </span>
 
                 <div className="flex items-center gap-1">
-                  {/* Due task indicator for this date */}
-                  {visibleDateTasks.some((t) => t.dueDate === cell.dateStr) && (
-                    <span 
-                      className="text-[8px] font-mono font-bold px-1 py-0.2 rounded bg-neutral-900 text-white tracking-tight"
-                      title="Tasks due on this day"
-                    >
-                      DUE
-                    </span>
-                  )}
-
                   {/* Habit indicator if habits scheduled */}
                   {plannedHabitsCount > 0 && (
                     <span
@@ -241,37 +226,40 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     (i) => i.id === (task.inboxId || 'inbox-general')
                   );
                   const isDueThisDay = task.dueDate === cell.dateStr;
+                  const isDueActive = isDueThisDay && !task.completed;
                   return (
                     <div
                       key={task.id}
+                      style={
+                        isDueActive
+                          ? { backgroundColor: taskInbox?.color || '#171717', color: '#ffffff' }
+                          : undefined
+                      }
                       className={`text-[10px] truncate px-1.5 py-0.5 rounded flex items-center gap-1 border transition-colors ${
                         task.completed
                           ? 'bg-neutral-100 text-neutral-400 border-neutral-200 line-through'
-                          : isDueThisDay
-                          ? 'bg-neutral-100 font-medium text-neutral-900 border-neutral-300'
+                          : isDueActive
+                          ? 'border-transparent font-medium shadow-2xs'
                           : task.priority === 'high'
                           ? 'bg-red-50 text-red-700 border-red-200/60 font-medium'
                           : 'bg-[#fafafa] text-neutral-800 border-[#ebebeb]'
                       }`}
                     >
-                      {/* Little bit of inbox color */}
-                      <span
-                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: taskInbox?.color || '#171717' }}
-                      />
+                      {/* Little bit of inbox color dot if not full background */}
+                      {!isDueActive && (
+                        <span
+                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: taskInbox?.color || '#171717' }}
+                        />
+                      )}
                       {task.completed ? (
                         <CheckCircle2 className="w-2.5 h-2.5 text-neutral-900 flex-shrink-0" />
                       ) : (
-                        <Circle className="w-2.5 h-2.5 text-neutral-400 flex-shrink-0" />
-                      )}
-                      {isDueThisDay && (
-                        <span className="text-[7px] font-mono font-bold px-0.5 rounded bg-neutral-900 text-white flex-shrink-0">
-                          DUE
-                        </span>
+                        <Circle className={`w-2.5 h-2.5 flex-shrink-0 ${isDueActive ? 'text-white' : 'text-neutral-400'}`} />
                       )}
                       <span className="truncate">{task.title}</span>
                       {(task.completedParts || 0) > 0 && !task.completed && (
-                        <span className="text-[8px] font-mono text-neutral-500 font-semibold ml-auto flex-shrink-0">
+                        <span className={`text-[8px] font-mono font-semibold ml-auto flex-shrink-0 ${isDueActive ? 'text-white/90' : 'text-neutral-500'}`}>
                           {task.completedParts}/4
                         </span>
                       )}

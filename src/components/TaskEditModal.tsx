@@ -22,6 +22,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   const [dueDate, setDueDate] = useState(task.dueDate || '');
   const [scheduledDate, setScheduledDate] = useState(task.scheduledDate || '');
   const [completedParts, setCompletedParts] = useState(task.completed ? 4 : (task.completedParts ?? 0));
+  const [hasProgress, setHasProgress] = useState(Boolean(task.hasProgress));
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +37,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
       category: selectedInbox?.name || 'General',
       dueDate: dueDate || undefined,
       scheduledDate: scheduledDate || undefined,
+      hasProgress: hasProgress || completedParts > 0,
       completedParts,
       completed: completedParts >= 4,
     });
@@ -157,14 +159,17 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                 <button
                   key={p}
                   type="button"
-                  onClick={() => setCompletedParts(p)}
+                  onClick={() => {
+                    setHasProgress(true);
+                    setCompletedParts(p);
+                  }}
                   className={`px-2.5 py-1 text-xs rounded-md border font-mono transition-all ${
-                    completedParts === p
+                    completedParts === p && hasProgress
                       ? 'bg-neutral-900 text-white border-neutral-900 font-semibold'
                       : 'bg-white text-neutral-600 border-[#ebebeb] hover:bg-neutral-50'
                   }`}
                 >
-                  {p}/4 ({p * 25}%)
+                  {p}/4
                 </button>
               ))}
             </div>

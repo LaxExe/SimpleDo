@@ -722,12 +722,16 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
                         <div className="min-w-0">
                           <p 
                             onClick={() => {
-                              const current = task.completed ? 4 : (task.completedParts || 0);
-                              const next = current >= 4 ? 0 : current + 1;
-                              storage.setTaskProgress(task.id, next);
+                              if (!task.hasProgress) {
+                                storage.setTaskProgress(task.id, 0);
+                              } else {
+                                const current = task.completed ? 4 : (task.completedParts || 0);
+                                const next = current >= 4 ? 0 : current + 1;
+                                storage.setTaskProgress(task.id, next);
+                              }
                             }}
                             className="text-xs font-medium truncate text-neutral-900 cursor-pointer hover:opacity-80 transition-opacity"
-                            title="Click to advance progress"
+                            title={task.hasProgress ? 'Click to advance progress' : 'Click to enable progress'}
                           >
                             {task.title}
                           </p>
@@ -746,6 +750,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
                             )}
                             <TaskProgressBar
                               taskId={task.id}
+                              hasProgress={task.hasProgress}
                               completedParts={task.completedParts}
                               totalParts={task.totalParts || 4}
                               completed={task.completed}

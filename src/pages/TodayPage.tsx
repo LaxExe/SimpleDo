@@ -55,12 +55,14 @@ export const TodayPage: React.FC<TodayPageProps> = ({
   const todayStr = getTodayStr();
   const dayPlan = dayPlans[selectedDate] || storage.getDayPlan(selectedDate);
 
-  // Compute tasks for selected date & sort so active tasks appear first
+  // Compute tasks for selected date (active only; completed tasks move to archive)
   const rawPlannedTasks = tasks.filter(
     (t) =>
-      dayPlan.plannedTaskIds.includes(t.id) ||
-      t.scheduledDate === selectedDate ||
-      t.dueDate === selectedDate
+      !t.completed && (
+        dayPlan.plannedTaskIds.includes(t.id) ||
+        t.scheduledDate === selectedDate ||
+        t.dueDate === selectedDate
+      )
   );
   const plannedTasks = sortTasks(rawPlannedTasks);
 
@@ -120,7 +122,6 @@ export const TodayPage: React.FC<TodayPageProps> = ({
       title: taskInput.trim(),
       completed: false,
       priority: 'medium',
-      category: 'Day Plan',
       inboxId: inboxes[0]?.id || 'inbox-general',
       scheduledDate: selectedDate,
       dueDate: selectedDate,
@@ -237,18 +238,13 @@ export const TodayPage: React.FC<TodayPageProps> = ({
               {plannedTasks.length} {plannedTasks.length === 1 ? 'task' : 'tasks'} for today
             </span>
           </div>
-          <p className="text-sm text-neutral-500 mt-1">
-            {isToday
-              ? 'Your active tasks and habits for today. Check them off as you complete them.'
-              : `Viewing scheduled items for ${formattedDate}.`}
-          </p>
         </div>
 
         {/* Large Simple Task List */}
         <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle divide-y divide-[#ebebeb] overflow-hidden">
           {plannedTasks.length === 0 ? (
-            <div className="p-8 text-center text-sm text-neutral-400">
-              No tasks scheduled for today. Add or drag tasks below in the plan section.
+            <div className="p-8 text-center text-xs font-mono text-neutral-400">
+              No tasks scheduled for today.
             </div>
           ) : (
             plannedTasks.map((task) => {
@@ -281,16 +277,20 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                     <div className="min-w-0">
                       <p
                         onClick={() => {
-                          const current = task.completed ? 4 : (task.completedParts || 0);
-                          const next = current >= 4 ? 0 : current + 1;
-                          storage.setTaskProgress(task.id, next);
+                          if (!task.hasProgress) {
+                            storage.setTaskProgress(task.id, 0);
+                          } else {
+                            const current = task.completed ? 4 : (task.completedParts || 0);
+                            const next = current >= 4 ? 0 : current + 1;
+                            storage.setTaskProgress(task.id, next);
+                          }
                         }}
                         className={`text-base sm:text-lg font-medium leading-snug truncate cursor-pointer hover:opacity-80 transition-opacity ${
                           task.completed
                             ? 'line-through text-neutral-400'
                             : 'text-neutral-900'
                         }`}
-                        title="Click to advance progress"
+                        title={task.hasProgress ? 'Click to advance progress' : 'Click to enable progress'}
                       >
                         {task.title}
                       </p>
@@ -301,13 +301,14 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                             style={{ backgroundColor: taskInbox?.color || '#171717' }}
                           />
                           <span className="text-xs font-mono text-neutral-500">
-                            {taskInbox?.name || task.category || 'General'}
+                            {taskInbox?.name || 'Inbox'}
                           </span>
                         </div>
 
-                        {/* 4-Part Progress Bar */}
+                        {/* 4-Part Progress Bar (only rendered when activated) */}
                         <TaskProgressBar
                           taskId={task.id}
+                          hasProgress={task.hasProgress}
                           completedParts={task.completedParts}
                           totalParts={task.totalParts || 4}
                           completed={task.completed}
@@ -471,16 +472,11 @@ export const TodayPage: React.FC<TodayPageProps> = ({
       {/* 2. PLAN SECTION: ADD, DRAG, & HORIZONTAL SCROLL BY INBOX */}
       {/* ======================================================== */}
       <section className="space-y-5 pt-4 border-t border-[#ebebeb]">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-neutral-900" />
-            <h2 className="text-lg font-semibold text-neutral-900 tracking-tight">
-              Plan
-            </h2>
-          </div>
-          <span className="text-xs text-neutral-400">
-            Add or drag tasks into your day
-          </span>
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-neutral-900" />
+          <h2 className="text-lg font-semibold text-neutral-900 tracking-tight">
+            Plan
+          </h2>
         </div>
 
         {/* Quick Add Focus Task Form */}
@@ -518,13 +514,10 @@ export const TodayPage: React.FC<TodayPageProps> = ({
           <div className="flex items-center justify-between text-xs text-neutral-500 pb-2 border-b border-[#ebebeb]">
             <span className="font-semibold text-neutral-900 flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-neutral-900" />
-              <span>Available Tasks & Habits to Drag into Today</span>
+              <span>Available</span>
             </span>
 
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-mono text-neutral-400 mr-1 hidden sm:inline">
-                Scroll right for more
-              </span>
               <button
                 type="button"
                 onClick={scrollPlanPoolLeft}

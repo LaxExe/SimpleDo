@@ -238,22 +238,27 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
                     <div className="min-w-0">
                       <p
                         onClick={() => {
-                          const current = task.completed ? 4 : (task.completedParts || 0);
-                          const next = current >= 4 ? 0 : current + 1;
-                          storage.setTaskProgress(task.id, next);
+                          if (!task.hasProgress) {
+                            storage.setTaskProgress(task.id, 0);
+                          } else {
+                            const current = task.completed ? 4 : (task.completedParts || 0);
+                            const next = current >= 4 ? 0 : current + 1;
+                            storage.setTaskProgress(task.id, next);
+                          }
                         }}
                         className={`text-xs font-medium truncate cursor-pointer hover:opacity-80 transition-opacity ${
                           task.completed
                             ? 'line-through text-neutral-400'
                             : 'text-neutral-900'
                         }`}
-                        title="Click to advance progress"
+                        title={task.hasProgress ? 'Click to advance progress' : 'Click to enable progress'}
                       >
                         {task.title}
                       </p>
                       <div className="mt-1">
                         <TaskProgressBar
                           taskId={task.id}
+                          hasProgress={task.hasProgress}
                           completedParts={task.completedParts}
                           totalParts={task.totalParts || 4}
                           completed={task.completed}
