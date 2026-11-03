@@ -37,8 +37,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
       category: selectedInbox?.name || 'General',
       dueDate: dueDate || undefined,
       scheduledDate: scheduledDate || undefined,
-      hasProgress: hasProgress || completedParts > 0,
-      completedParts,
+      hasProgress: Boolean(hasProgress),
+      completedParts: hasProgress ? completedParts : 0,
       completed: task.completed,
     });
 
@@ -155,6 +155,20 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
               Progress (4 parts)
             </label>
             <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setHasProgress(false);
+                  setCompletedParts(0);
+                }}
+                className={`px-2.5 py-1 text-xs rounded-md border font-mono transition-all ${
+                  !hasProgress
+                    ? 'bg-neutral-900 text-white border-neutral-900 font-semibold'
+                    : 'bg-white text-neutral-600 border-[#ebebeb] hover:bg-neutral-50'
+                }`}
+              >
+                None (No Bar)
+              </button>
               {[0, 1, 2, 3, 4].map((p) => (
                 <button
                   key={p}

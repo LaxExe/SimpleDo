@@ -45,6 +45,11 @@ export const TaskProgressBar: React.FC<TaskProgressBarProps> = ({
     storage.setTaskProgress(taskId, 0);
   };
 
+  const handleRemoveProgress = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    storage.removeTaskProgress(taskId);
+  };
+
   return (
     <div 
       className="inline-flex items-center gap-2 select-none"
@@ -87,14 +92,14 @@ export const TaskProgressBar: React.FC<TaskProgressBarProps> = ({
           <span className={`font-semibold ${inverted ? 'text-white' : 'text-neutral-700'}`}>
             {currentParts}/{totalParts}
           </span>
-          {currentParts > 0 && !completed && (
+          {!completed && (
             <button
               type="button"
-              onClick={handleResetToZero}
-              className={`transition-colors ml-0.5 ${inverted ? 'text-white/70 hover:text-white' : 'text-neutral-400 hover:text-red-600'}`}
-              title="Reset to 0/4"
+              onClick={currentParts > 0 ? handleResetToZero : handleRemoveProgress}
+              className={`transition-colors ml-0.5 text-xs ${inverted ? 'text-white/70 hover:text-white' : 'text-neutral-400 hover:text-red-600'}`}
+              title={currentParts > 0 ? "Reset to 0/4" : "Remove progress bar"}
             >
-              ↺
+              {currentParts > 0 ? '↺' : '×'}
             </button>
           )}
         </div>

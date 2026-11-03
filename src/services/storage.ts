@@ -271,6 +271,53 @@ export const storage = {
     this.save(data);
   },
 
+  cycleTaskProgress(id: string) {
+    const data = this.load();
+    data.tasks = data.tasks.map((t) => {
+      if (t.id === id) {
+        // If task has no progress bar: enable it at 0/4
+        if (!t.hasProgress) {
+          return {
+            ...t,
+            hasProgress: true,
+            completedParts: 0,
+          };
+        }
+        const current = t.completedParts ?? 0;
+        if (current < 4) {
+          return {
+            ...t,
+            hasProgress: true,
+            completedParts: current + 1,
+          };
+        }
+        // At 4/4, next cycle disables the progress bar completely!
+        return {
+          ...t,
+          hasProgress: false,
+          completedParts: 0,
+        };
+      }
+      return t;
+    });
+    this.save(data);
+  },
+
+  removeTaskProgress(id: string) {
+    const data = this.load();
+    data.tasks = data.tasks.map((t) => {
+      if (t.id === id) {
+        return {
+          ...t,
+          hasProgress: false,
+          completedParts: 0,
+        };
+      }
+      return t;
+    });
+    this.save(data);
+  },
+
   deleteTask(id: string) {
     const data = this.load();
     data.tasks = data.tasks.filter((t) => t.id !== id);

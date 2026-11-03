@@ -10,6 +10,7 @@ import {
   GripVertical, 
   ChevronLeft, 
   ChevronRight, 
+  ChevronDown,
   Sparkles, 
   X, 
   Edit2, 
@@ -40,6 +41,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
   const [taskInput, setTaskInput] = useState('');
   const [isDropOver, setIsDropOver] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [isEventsOpen, setIsEventsOpen] = useState(true);
 
   // Ref for the horizontal scrolling available tasks/habits shelf
   const planPoolScrollRef = useRef<HTMLDivElement>(null);
@@ -106,14 +108,6 @@ export const TodayPage: React.FC<TodayPageProps> = ({
 
   const isToday = selectedDate === todayStr;
 
-  // Pretty format dates
-  const formattedDate = new Date(`${selectedDate}T00:00:00`).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-
   const formattedDateShort = new Date(`${selectedDate}T00:00:00`).toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
@@ -133,18 +127,6 @@ export const TodayPage: React.FC<TodayPageProps> = ({
     });
 
     setTaskInput('');
-  };
-
-  const handlePrevDay = () => {
-    const d = new Date(`${selectedDate}T00:00:00`);
-    d.setDate(d.getDate() - 1);
-    setSelectedDate(d.toISOString().split('T')[0]);
-  };
-
-  const handleNextDay = () => {
-    const d = new Date(`${selectedDate}T00:00:00`);
-    d.setDate(d.getDate() + 1);
-    setSelectedDate(d.toISOString().split('T')[0]);
   };
 
   // Drag and drop handlers
@@ -202,40 +184,11 @@ export const TodayPage: React.FC<TodayPageProps> = ({
         <div>
           {/* Unified Clean Header Row */}
           <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#ebebeb]">
-            {/* Title + Stepper Controls */}
+            {/* Title */}
             <div className="flex items-center gap-2 sm:gap-3">
-              <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-neutral-900">
+              <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-neutral-900">
                 {isToday ? 'Today' : formattedDateShort}
               </h1>
-
-              <div className="flex items-center bg-white p-0.5 rounded-lg border border-[#ebebeb] shadow-2xs">
-                <button
-                  onClick={handlePrevDay}
-                  className="p-1 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
-                  title="Previous Day"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </button>
-                <span className="text-[11px] font-mono text-neutral-500 px-1.5 hidden md:inline">
-                  {formattedDate}
-                </span>
-                <button
-                  onClick={handleNextDay}
-                  className="p-1 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
-                  title="Next Day"
-                >
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {!isToday && (
-                <button
-                  onClick={() => setSelectedDate(todayStr)}
-                  className="text-xs font-mono text-neutral-500 hover:text-neutral-900 underline ml-0.5"
-                >
-                  Return to Today
-                </button>
-              )}
             </div>
 
             {/* Right side stats */}
@@ -305,15 +258,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
 
                     <div className="min-w-0">
                       <p
-                        onClick={() => {
-                          if (!task.hasProgress) {
-                            storage.setTaskProgress(task.id, 0);
-                          } else {
-                            const current = task.completed ? 4 : (task.completedParts || 0);
-                            const next = current >= 4 ? 0 : current + 1;
-                            storage.setTaskProgress(task.id, next);
-                          }
-                        }}
+                        onClick={() => storage.cycleTaskProgress(task.id)}
                         className={`text-base sm:text-lg font-medium leading-snug truncate cursor-pointer hover:opacity-80 transition-opacity ${
                           task.completed
                             ? 'line-through opacity-60'
@@ -321,7 +266,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                             ? 'text-white'
                             : 'text-neutral-900'
                         }`}
-                        title={task.hasProgress ? 'Click to advance progress' : 'Click to enable progress'}
+                        title={task.hasProgress ? `Progress: ${task.completedParts ?? 0}/4 (Click to cycle)` : 'Click to enable progress bar'}
                       >
                         {task.title}
                       </p>
@@ -470,56 +415,67 @@ export const TodayPage: React.FC<TodayPageProps> = ({
             </div>
           )}
 
-          {/* Events for Today / Selected Date (sitting below tasks) */}
+          {/* Events for Today / Selected Date (sitting below tasks, collapsible) */}
           {selectedDateEvents.length > 0 && (
             <div className="p-4 sm:p-5 bg-white border-t border-[#ebebeb] space-y-2.5">
-              <div className="text-xs font-semibold text-neutral-700 uppercase tracking-wider flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setIsEventsOpen(!isEventsOpen)}
+                className="w-full text-xs font-semibold text-neutral-700 uppercase tracking-wider flex items-center justify-between cursor-pointer select-none hover:text-neutral-900 transition-colors"
+              >
                 <div className="flex items-center gap-1.5">
+                  <ChevronDown className={`w-3.5 h-3.5 text-neutral-500 transition-transform duration-200 ${isEventsOpen ? '' : '-rotate-90'}`} />
                   <CalendarIcon className="w-3.5 h-3.5 text-neutral-900" />
                   <span>Events</span>
                   <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-neutral-100 text-neutral-600">
                     {selectedDateEvents.length}
                   </span>
                 </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {selectedDateEvents.map((evt) => {
-                  const inboxInfo = inboxes.find((i) => i.id === evt.inboxId);
-                  return (
-                    <div
-                      key={evt.id}
-                      style={{
-                        backgroundColor: inboxInfo?.color || '#171717',
-                        color: '#ffffff',
-                      }}
-                      className="p-3 rounded-lg border border-transparent flex items-start justify-between gap-2 shadow-2xs text-white"
-                    >
-                      <div className="min-w-0 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full flex-shrink-0 bg-white" />
-                          <span className="text-xs font-semibold text-white truncate">
-                            {evt.title}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 text-[11px] text-white/90 font-mono">
-                          {evt.time && (
-                            <span className="flex items-center gap-1 text-white font-medium">
-                              <Clock className="w-3 h-3 text-white/80" />
-                              <span>{evt.time}</span>
+                <span className="text-[11px] font-mono font-normal text-neutral-400 lowercase">
+                  {isEventsOpen ? 'hide' : 'show'}
+                </span>
+              </button>
+
+              {isEventsOpen && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 animate-fadeIn">
+                  {selectedDateEvents.map((evt) => {
+                    const inboxInfo = inboxes.find((i) => i.id === evt.inboxId);
+                    return (
+                      <div
+                        key={evt.id}
+                        style={{
+                          backgroundColor: inboxInfo?.color || '#171717',
+                          color: '#ffffff',
+                        }}
+                        className="p-3 rounded-lg border border-transparent flex items-start justify-between gap-2 shadow-2xs text-white"
+                      >
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full flex-shrink-0 bg-white" />
+                            <span className="text-xs font-semibold text-white truncate">
+                              {evt.title}
                             </span>
-                          )}
-                          {evt.location && (
-                            <span className="flex items-center gap-1 text-white/90 truncate">
-                              <MapPin className="w-3 h-3 text-white/80 flex-shrink-0" />
-                              <span className="truncate">{evt.location}</span>
-                            </span>
-                          )}
+                          </div>
+                          <div className="flex items-center gap-3 text-[11px] text-white/90 font-mono">
+                            {evt.time && (
+                              <span className="flex items-center gap-1 text-white font-medium">
+                                <Clock className="w-3 h-3 text-white/80" />
+                                <span>{evt.time}</span>
+                              </span>
+                            )}
+                            {evt.location && (
+                              <span className="flex items-center gap-1 text-white/90 truncate">
+                                <MapPin className="w-3 h-3 text-white/80 flex-shrink-0" />
+                                <span className="truncate">{evt.location}</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>

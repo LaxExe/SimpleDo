@@ -53,6 +53,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
 
   // Archive accordion state (collapsed by default)
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  const [isEventsOpen, setIsEventsOpen] = useState(true);
 
   // New Inbox creation
   const [isCreatingInbox, setIsCreatingInbox] = useState(false);
@@ -721,17 +722,9 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
                         </button>
                         <div className="min-w-0">
                           <p 
-                            onClick={() => {
-                              if (!task.hasProgress) {
-                                storage.setTaskProgress(task.id, 0);
-                              } else {
-                                const current = task.completed ? 4 : (task.completedParts || 0);
-                                const next = current >= 4 ? 0 : current + 1;
-                                storage.setTaskProgress(task.id, next);
-                              }
-                            }}
+                            onClick={() => storage.cycleTaskProgress(task.id)}
                             className="text-xs font-medium truncate text-neutral-900 cursor-pointer hover:opacity-80 transition-opacity"
-                            title={task.hasProgress ? 'Click to advance progress' : 'Click to enable progress'}
+                            title={task.hasProgress ? `Progress: ${task.completedParts ?? 0}/4 (Click to cycle)` : 'Click to enable progress bar'}
                           >
                             {task.title}
                           </p>
@@ -809,16 +802,24 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
             )}
           </div>
 
-          {/* Events Section: Sitting below tasks */}
+          {/* Events Section: Sitting below tasks (collapsible) */}
           <div className="bg-white rounded-lg border border-[#ebebeb] shadow-subtle overflow-hidden">
             <div className="p-3.5 bg-[#fafafa] border-b border-[#ebebeb] flex items-center justify-between text-xs text-neutral-600 font-medium">
-              <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsEventsOpen(!isEventsOpen)}
+                className="flex items-center gap-2 hover:text-neutral-900 transition-colors select-none"
+              >
+                <ChevronDown className={`w-3.5 h-3.5 text-neutral-500 transition-transform duration-200 ${isEventsOpen ? '' : '-rotate-90'}`} />
                 <Calendar className="w-3.5 h-3.5 text-neutral-900" />
                 <span className="font-semibold text-neutral-900">Events</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-neutral-200 text-neutral-700">
                   {activeEvents.length}
                 </span>
-              </div>
+                <span className="text-[10px] text-neutral-400 font-normal">
+                  ({isEventsOpen ? 'collapse' : 'expand'})
+                </span>
+              </button>
               <button
                 type="button"
                 onClick={() => setCreateType('event')}
@@ -828,6 +829,9 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
                 <span>New Event</span>
               </button>
             </div>
+
+            {isEventsOpen && (
+              <>
 
             {activeEvents.length === 0 ? (
               <div className="py-8 text-center text-xs text-neutral-400">
@@ -924,6 +928,8 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
                   );
                 })}
               </ul>
+            )}
+              </>
             )}
           </div>
 

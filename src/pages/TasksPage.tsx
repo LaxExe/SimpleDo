@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Task, InboxGroup, Priority } from '../types';
-import { storage, getTodayStr, sortTasks } from '../services/storage';
+import { storage, getTodayStr } from '../services/storage';
 import { TaskProgressBar } from '../components/TaskProgressBar';
 import { TaskEditModal } from '../components/TaskEditModal';
 import { 
@@ -12,7 +12,8 @@ import {
   Tag, 
   Sun, 
   Edit2,
-  Check
+  Check,
+  ArrowUpDown
 } from 'lucide-react';
 
 interface TasksPageProps {
@@ -23,6 +24,7 @@ interface TasksPageProps {
 export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
   // Show active tasks only by default
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'high'>('active');
+  const [sortBy, setSortBy] = useState<'priority' | 'due_date' | 'inbox' | 'newest'>('priority');
   const [title, setTitle] = useState('');
   const [inboxId, setInboxId] = useState(inboxes[0]?.id || 'inbox-general');
   const [priority, setPriority] = useState<Priority>('medium');
@@ -71,8 +73,41 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
     return true;
   });
 
-  // Prioritize active tasks (high -> medium -> low), completed at the bottom
-  const filteredTasks = sortTasks(rawFilteredTasks);
+  // Prioritize active tasks first, then apply sortBy
+  const filteredTasks = [...rawFilteredTasks].sort((a, b) => {
+    // 1. Active before completed
+    if (a.completed !== b.completed) {
+      return a.completed ? 1 : -1;
+    }
+
+    if (sortBy === 'due_date') {
+      // Most recently / earliest due date first
+      if (a.dueDate && b.dueDate) {
+        return a.dueDate.localeCompare(b.dueDate);
+      }
+      if (a.dueDate && !b.dueDate) return -1;
+      if (!a.dueDate && b.dueDate) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+
+    if (sortBy === 'inbox') {
+      const inboxA = inboxes.find((i) => i.id === a.inboxId)?.name || 'General';
+      const inboxB = inboxes.find((i) => i.id === b.inboxId)?.name || 'General';
+      const cmp = inboxA.localeCompare(inboxB);
+      if (cmp !== 0) return cmp;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+
+    if (sortBy === 'newest') {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+
+    // Default: 'priority' (High -> Medium -> Low)
+    const priorityWeight: Record<Priority, number> = { high: 3, medium: 2, low: 1 };
+    const diff = priorityWeight[b.priority] - priorityWeight[a.priority];
+    if (diff !== 0) return diff;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 
   const completedCount = tasks.filter((t) => t.completed).length;
   const pendingCount = tasks.length - completedCount;
@@ -174,22 +209,41 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
         </form>
       )}
 
-      {/* Filters and Stats */}
+      {/* Filters, Sort, and Stats */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-        <div className="flex items-center gap-1 bg-[#ebebeb]/50 p-1 rounded-full border border-[#ebebeb] w-full sm:w-fit overflow-x-auto no-scrollbar">
-          {(['all', 'active', 'completed', 'high'] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setFilter(mode)}
-              className={`px-3 py-1 text-xs font-medium rounded-full capitalize transition-all ${
-                filter === mode
-                  ? 'bg-white text-neutral-900 shadow-sm'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              }`}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Status filter pills */}
+          <div className="flex items-center gap-1 bg-[#ebebeb]/50 p-1 rounded-full border border-[#ebebeb] overflow-x-auto no-scrollbar">
+            {(['all', 'active', 'completed', 'high'] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setFilter(mode)}
+                className={`px-3 py-1 text-xs font-medium rounded-full capitalize transition-all ${
+                  filter === mode
+                    ? 'bg-white text-neutral-900 shadow-sm'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+
+          {/* Sort Selection */}
+          <div className="flex items-center gap-1.5 bg-white border border-[#ebebeb] px-2.5 py-1 rounded-full shadow-2xs text-xs">
+            <ArrowUpDown className="w-3 h-3 text-neutral-400" />
+            <span className="text-neutral-400 font-mono text-[11px]">Sort:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-transparent text-neutral-900 font-medium text-xs focus:outline-none cursor-pointer"
             >
-              {mode}
-            </button>
-          ))}
+              <option value="priority">Priority</option>
+              <option value="due_date">Due Date</option>
+              <option value="inbox">Inbox</option>
+              <option value="newest">Newest</option>
+            </select>
+          </div>
         </div>
 
         <div className="flex items-center gap-3 text-xs text-neutral-500 font-mono">
@@ -237,21 +291,13 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
 
                     <div className="min-w-0">
                       <p
-                        onClick={() => {
-                          if (!task.hasProgress) {
-                            storage.setTaskProgress(task.id, 0);
-                          } else {
-                            const current = task.completed ? 4 : (task.completedParts || 0);
-                            const next = current >= 4 ? 0 : current + 1;
-                            storage.setTaskProgress(task.id, next);
-                          }
-                        }}
+                        onClick={() => storage.cycleTaskProgress(task.id)}
                         className={`text-xs font-medium truncate cursor-pointer hover:opacity-80 transition-opacity ${
                           task.completed
                             ? 'line-through text-neutral-400'
                             : 'text-neutral-900'
                         }`}
-                        title={task.hasProgress ? 'Click to advance progress' : 'Click to enable progress'}
+                        title={task.hasProgress ? `Progress: ${task.completedParts ?? 0}/4 (Click to cycle)` : 'Click to enable progress bar'}
                       >
                         {task.title}
                       </p>
