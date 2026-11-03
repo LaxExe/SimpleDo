@@ -122,7 +122,9 @@ export async function pushToFirebase(data: SimpleDoData): Promise<boolean> {
 
   try {
     const dataRef = ref(rtdb, 'simpledo_data');
-    await set(dataRef, data);
+    // Deep clone and clean all undefined values to avoid Firebase validation errors
+    const cleanData = JSON.parse(JSON.stringify(data));
+    await set(dataRef, cleanData);
     setSyncStatus('connected');
     return true;
   } catch (err: any) {
@@ -154,20 +156,11 @@ export function initFirebaseSync(
 
       if (val && typeof val === 'object') {
         const normalized = normalizeFirebaseData(val);
-        const local = getLocalData();
-        // If remote has content or local is empty, apply remote
-        if (normalized.tasks.length > 0 || normalized.events.length > 0 || normalized.inboxes.length > 1 || local.tasks.length === 0) {
-          isApplyingRemoteChange = true;
-          try {
-            onRemoteData(normalized);
-          } finally {
-            setTimeout(() => {
-              isApplyingRemoteChange = false;
-            }, 150);
-          }
-        } else if (local.tasks.length > 0 && normalized.tasks.length === 0) {
-          // Local device has tasks, but Firebase had 0 tasks: seed Firebase with local tasks
-          pushToFirebase(local);
+        isApplyingRemoteChange = true;
+        try {
+          onRemoteData(normalized);
+        } finally {
+          isApplyingRemoteChange = false;
         }
       } else if (!val) {
         // Database is empty in Firebase: seed it from local device if local device has data

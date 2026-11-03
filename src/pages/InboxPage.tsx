@@ -114,7 +114,10 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
   const todayPlan = storage.getDayPlan(todayStr);
 
   const isPlannedForToday = (task: Task) => {
-    return task.scheduledDate === todayStr || todayPlan.plannedTaskIds.includes(task.id);
+    return (
+      task.scheduledDate === todayStr ||
+      Boolean(todayPlan?.plannedTaskIds && todayPlan.plannedTaskIds.includes(task.id))
+    );
   };
 
   const handleToggleToday = (taskId: string, isCurrentlyPlanned: boolean) => {

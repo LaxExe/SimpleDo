@@ -182,10 +182,14 @@ export const storage = {
 
   save(data: SimpleDoData, skipFirebase = false) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      // Deep clone & sanitize: strip all undefined values before saving to localStorage and Firebase
+      const cleanData: SimpleDoData = JSON.parse(JSON.stringify(data));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanData));
       window.dispatchEvent(new Event(EVENT_NAME));
       if (!skipFirebase) {
-        pushToFirebase(data).catch(() => {});
+        pushToFirebase(cleanData).catch((err) => {
+          console.warn('pushToFirebase error:', err);
+        });
       }
     } catch (e) {
       console.error('Failed to save to localStorage', e);
@@ -203,6 +207,10 @@ export const storage = {
       id: `task-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       createdAt: new Date().toISOString(),
     };
+    if (newTask.inboxId && !newTask.category) {
+      const inbox = data.inboxes.find((i) => i.id === newTask.inboxId);
+      if (inbox) newTask.category = inbox.name;
+    }
     data.tasks.unshift(newTask);
 
     if (newTask.scheduledDate) {
@@ -212,6 +220,9 @@ export const storage = {
           plannedTaskIds: [],
           plannedHabitIds: [],
         };
+      }
+      if (!Array.isArray(data.dayPlans[newTask.scheduledDate].plannedTaskIds)) {
+        data.dayPlans[newTask.scheduledDate].plannedTaskIds = [];
       }
       if (!data.dayPlans[newTask.scheduledDate].plannedTaskIds.includes(newTask.id)) {
         data.dayPlans[newTask.scheduledDate].plannedTaskIds.push(newTask.id);
@@ -226,15 +237,27 @@ export const storage = {
     const data = this.load();
     const oldTask = data.tasks.find((t) => t.id === id);
 
-    data.tasks = data.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t));
+    data.tasks = data.tasks.map((t) => {
+      if (t.id === id) {
+        const updated = { ...t, ...updates };
+        if (updates.scheduledDate === undefined && 'scheduledDate' in updates) {
+          delete updated.scheduledDate;
+        }
+        if (updates.dueDate === undefined && 'dueDate' in updates) {
+          delete updated.dueDate;
+        }
+        return updated;
+      }
+      return t;
+    });
 
     // Handle scheduledDate changes if scheduledDate was updated
     if (updates.scheduledDate !== undefined && oldTask?.scheduledDate !== updates.scheduledDate) {
       // Remove from old scheduled date dayPlan
       if (oldTask?.scheduledDate && data.dayPlans[oldTask.scheduledDate]) {
-        data.dayPlans[oldTask.scheduledDate].plannedTaskIds = data.dayPlans[
-          oldTask.scheduledDate
-        ].plannedTaskIds.filter((tId) => tId !== id);
+        data.dayPlans[oldTask.scheduledDate].plannedTaskIds = (
+          data.dayPlans[oldTask.scheduledDate].plannedTaskIds || []
+        ).filter((tId) => tId !== id);
       }
       // Add to new scheduled date dayPlan
       if (updates.scheduledDate) {
@@ -244,6 +267,9 @@ export const storage = {
             plannedTaskIds: [],
             plannedHabitIds: [],
           };
+        }
+        if (!Array.isArray(data.dayPlans[updates.scheduledDate].plannedTaskIds)) {
+          data.dayPlans[updates.scheduledDate].plannedTaskIds = [];
         }
         if (!data.dayPlans[updates.scheduledDate].plannedTaskIds.includes(id)) {
           data.dayPlans[updates.scheduledDate].plannedTaskIds.push(id);
@@ -420,7 +446,16 @@ export const storage = {
   updateEvent(id: string, updates: Partial<InboxEvent>) {
     const data = this.load();
     if (!data.events) data.events = [];
-    data.events = data.events.map((e) => (e.id === id ? { ...e, ...updates } : e));
+    data.events = data.events.map((e) => {
+      if (e.id === id) {
+        const updated = { ...e, ...updates };
+        if (updates.time === undefined && 'time' in updates) delete updated.time;
+        if (updates.location === undefined && 'location' in updates) delete updated.location;
+        if (updates.description === undefined && 'description' in updates) delete updated.description;
+        return updated;
+      }
+      return e;
+    });
     this.save(data);
   },
 
@@ -467,6 +502,9 @@ export const storage = {
         plannedHabitIds: [],
       };
     }
+    if (!Array.isArray(data.dayPlans[date].plannedTaskIds)) {
+      data.dayPlans[date].plannedTaskIds = [];
+    }
     if (!data.dayPlans[date].plannedTaskIds.includes(taskId)) {
       data.dayPlans[date].plannedTaskIds.push(taskId);
     }
@@ -479,17 +517,27 @@ export const storage = {
   removeTaskFromDate(date: string, taskId: string) {
     const data = this.load();
     if (data.dayPlans[date]) {
-      data.dayPlans[date].plannedTaskIds = data.dayPlans[date].plannedTaskIds.filter(
-        (id) => id !== taskId
-      );
+      data.dayPlans[date].plannedTaskIds = (
+        data.dayPlans[date].plannedTaskIds || []
+      ).filter((id) => id !== taskId);
     }
+    // Also remove from any other dayPlans matching this date
+    Object.keys(data.dayPlans || {}).forEach((d) => {
+      if (d === date && data.dayPlans[d]) {
+        data.dayPlans[d].plannedTaskIds = (
+          data.dayPlans[d].plannedTaskIds || []
+        ).filter((id) => id !== taskId);
+      }
+    });
+
+    // Remove scheduledDate from task while keeping dueDate deadline intact
     data.tasks = data.tasks.map((t) => {
       if (t.id === taskId) {
-        return {
-          ...t,
-          scheduledDate: t.scheduledDate === date ? undefined : t.scheduledDate,
-          dueDate: t.dueDate === date ? undefined : t.dueDate,
-        };
+        const updated = { ...t };
+        if (updated.scheduledDate === date) {
+          delete updated.scheduledDate;
+        }
+        return updated;
       }
       return t;
     });

@@ -64,8 +64,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
     (t) =>
       !t.completed && (
         plannedTaskIds.includes(t.id) ||
-        t.scheduledDate === selectedDate ||
-        t.dueDate === selectedDate
+        t.scheduledDate === selectedDate
       )
   );
   const plannedTasks = sortTasks(rawPlannedTasks);

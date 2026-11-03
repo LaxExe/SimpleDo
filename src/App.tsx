@@ -69,9 +69,7 @@ export function App() {
   const todayTasksCount = (data.tasks || []).filter(
     (t) =>
       !t.completed &&
-      (plannedTaskIds.includes(t.id) ||
-        t.scheduledDate === todayStr ||
-        t.dueDate === todayStr)
+      (plannedTaskIds.includes(t.id) || t.scheduledDate === todayStr)
   ).length;
 
   const pendingTasksCount = (data.tasks || []).filter((t) => !t.completed).length;
