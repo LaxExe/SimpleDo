@@ -1,4 +1,4 @@
-export type Page = 'today' | 'tasks' | 'inbox' | 'tracker';
+export type Page = 'today' | 'tasks' | 'inbox' | 'tracker' | 'agents';
 
 export type Priority = 'low' | 'medium' | 'high';
 

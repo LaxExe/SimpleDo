@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Page } from './types';
 import { useSimpleDoData } from './hooks/useSimpleDoData';
 import { Navigation } from './components/Navigation';
@@ -6,11 +6,25 @@ import { TodayPage } from './pages/TodayPage';
 import { TasksPage } from './pages/TasksPage';
 import { InboxPage } from './pages/InboxPage';
 import { TrackerPage } from './pages/TrackerPage';
+import { AgentsPage } from './pages/AgentsPage';
 import { storage, getTodayStr } from './services/storage';
 
 export function App() {
   const [currentPage, setCurrentPage] = useState<Page>('today');
   const data = useSimpleDoData();
+
+  // Listen to hash changes (e.g. /#agents or /#.agents)
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.toLowerCase().replace('#', '').replace('/', '');
+      if (hash === 'agents' || hash === '.agents') {
+        setCurrentPage('agents');
+      }
+    };
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
 
   const todayStr = getTodayStr();
   const dayPlan = data.dayPlans[todayStr] || {
@@ -78,6 +92,8 @@ export function App() {
         )}
 
         {currentPage === 'tracker' && <TrackerPage habits={data.habits} />}
+
+        {currentPage === 'agents' && <AgentsPage onNavigate={setCurrentPage} />}
       </main>
 
       {/* Footer */}
@@ -91,27 +107,47 @@ export function App() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setCurrentPage('today')}
-              className="hover:text-neutral-900 transition-colors"
+              className={`hover:text-neutral-900 transition-colors ${
+                currentPage === 'today' ? 'text-neutral-900 font-medium' : ''
+              }`}
             >
               Today
             </button>
             <button
               onClick={() => setCurrentPage('tasks')}
-              className="hover:text-neutral-900 transition-colors"
+              className={`hover:text-neutral-900 transition-colors ${
+                currentPage === 'tasks' ? 'text-neutral-900 font-medium' : ''
+              }`}
             >
               Tasks
             </button>
             <button
               onClick={() => setCurrentPage('inbox')}
-              className="hover:text-neutral-900 transition-colors"
+              className={`hover:text-neutral-900 transition-colors ${
+                currentPage === 'inbox' ? 'text-neutral-900 font-medium' : ''
+              }`}
             >
               Inbox
             </button>
             <button
               onClick={() => setCurrentPage('tracker')}
-              className="hover:text-neutral-900 transition-colors"
+              className={`hover:text-neutral-900 transition-colors ${
+                currentPage === 'tracker' ? 'text-neutral-900 font-medium' : ''
+              }`}
             >
               Tracker
+            </button>
+            <span className="text-neutral-300">|</span>
+            <button
+              onClick={() => setCurrentPage('agents')}
+              className={`font-mono transition-colors flex items-center gap-1 ${
+                currentPage === 'agents'
+                  ? 'text-neutral-900 font-semibold underline'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+              title="Autonomous Agent Instructions & Protocol"
+            >
+              <span>.Agents</span>
             </button>
             <span className="text-neutral-300">|</span>
             <button
