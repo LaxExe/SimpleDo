@@ -216,16 +216,36 @@ export const AgentsPage: React.FC<AgentsPageProps> = ({ onNavigate }) => {
   const rawInstructionsText = `# SimpleDo — Autonomous Agent Operational Manual & API Protocol
 
 > Application: SimpleDo
-> Runtime: Browser Client (Local-First, React 18, Vite, Tailwind CSS)
+> Cloud Real-Time Database: https://simple-do-c5438-default-rtdb.firebaseio.com/simpledo_data.json
 > Primary Storage Key: 'simpledo_data_v4' in localStorage
 > Global Window API: window.storage
 > Change Event: 'simpledo:change' dispatched on window
 
 ---
 
+## ⚡ Direct Firebase REST API (Recommended for External Agents)
+
+Any AI agent, script, or automated tool can read and write to SimpleDo directly via HTTP.
+**When an agent writes to this endpoint, the user's phone and laptop screens update live in <50ms.**
+
+### 1. Read All Current Data
+\`\`\`bash
+curl -s "https://simple-do-c5438-default-rtdb.firebaseio.com/simpledo_data.json"
+\`\`\`
+
+### 2. Write / Replace Database (Instant Sync to Phone & Laptop)
+\`\`\`bash
+curl -X PUT "https://simple-do-c5438-default-rtdb.firebaseio.com/simpledo_data.json" \\
+  -H "Content-Type: application/json" \\
+  -d @updated_database.json
+\`\`\`
+
+---
+
 ## 1. System Overview & Core Philosophy
-SimpleDo is an ultra-minimalist, local-first daily execution and task planning engine.
-- Zero External Backend: All data persists client-side in localStorage ('simpledo_data_v4').
+SimpleDo is an ultra-minimalist, local-first daily execution and task planning engine with instant cloud synchronization.
+- Real-Time Multi-Device Sync: Automatic 2-way sync across phone and laptop via Firebase Realtime Database.
+- Zero Git Pollution: No automated commits on GitHub.
 - Immediate Reactivity: Every storage mutation broadcasts 'simpledo:change' on window, re-rendering active components automatically.
 - Global Console Access: window.storage is exposed globally for headless agents, browser automation tools, and dev scripts.
 - Design Language: Strict monochrome typography, high contrast, clean borders, lowercase brand "simple do", fractions for progress (no percentage symbols).
@@ -537,7 +557,42 @@ console.log({ activeTodayTasks, activeTodayEvents });
       {/* TAB 1: LIVE EDITABLE DATABASE (DIRECT LINK & TEXTBOX) */}
       {/* ======================================================== */}
       {activeTab === 'database' && (
-        <div className="space-y-6">
+        <div className="space-y-5">
+          {/* Direct Firebase REST API for External Agents */}
+          <div className="p-4 bg-white rounded-xl border border-[#ebebeb] shadow-subtle space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2 border-b border-[#ebebeb]">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <h3 className="text-xs font-mono font-bold text-neutral-900 uppercase tracking-wider">
+                  Direct Firebase REST API (For External AI Agents & Scripts)
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
+                Live 50ms Sync to Phone
+              </span>
+            </div>
+
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              Your autonomous agent can directly inspect and edit SimpleDo over HTTP. Any update to this URL immediately syncs live to your phone and laptop screens within 50 milliseconds.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono">
+              <div className="p-2.5 bg-[#fafafa] rounded-lg border border-[#ebebeb] space-y-1">
+                <span className="text-neutral-400 block text-[10px] uppercase font-semibold">GET (Read All Data):</span>
+                <code className="text-neutral-900 select-all block overflow-x-auto text-[11px]">
+                  curl -s "https://simple-do-c5438-default-rtdb.firebaseio.com/simpledo_data.json"
+                </code>
+              </div>
+
+              <div className="p-2.5 bg-[#fafafa] rounded-lg border border-[#ebebeb] space-y-1">
+                <span className="text-neutral-400 block text-[10px] uppercase font-semibold">PUT (Write / Replace Data):</span>
+                <code className="text-neutral-900 select-all block overflow-x-auto text-[11px]">
+                  curl -X PUT "https://simple-do-c5438-default-rtdb.firebaseio.com/simpledo_data.json" -H "Content-Type: application/json" -d @data.json
+                </code>
+              </div>
+            </div>
+          </div>
+
           {/* Live DB Stats Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
             <div className="p-3 bg-white border border-[#ebebeb] rounded-lg shadow-2xs">
