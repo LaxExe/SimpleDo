@@ -7,13 +7,11 @@ import { TasksPage } from './pages/TasksPage';
 import { InboxPage } from './pages/InboxPage';
 import { TrackerPage } from './pages/TrackerPage';
 import { AgentsPage } from './pages/AgentsPage';
-import { SyncModal } from './components/SyncModal';
 import { storage, getTodayStr } from './services/storage';
-import { Smartphone, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 
 export function App() {
   const [currentPage, setCurrentPage] = useState<Page>('today');
-  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
   const data = useSimpleDoData();
 
@@ -129,12 +127,6 @@ export function App() {
         </div>
       )}
 
-      {/* Cross-Device / Phone Sync Modal */}
-      <SyncModal
-        isOpen={isSyncModalOpen}
-        onClose={() => setIsSyncModalOpen(false)}
-      />
-
       {/* Footer */}
       <footer className="border-t border-[#ebebeb] bg-[#fafafa] py-6 mt-auto">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-neutral-400">
@@ -175,15 +167,6 @@ export function App() {
               }`}
             >
               Tracker
-            </button>
-            <span className="text-neutral-300">|</span>
-            <button
-              onClick={() => setIsSyncModalOpen(true)}
-              className="hover:text-neutral-900 transition-colors inline-flex items-center gap-1 font-medium text-neutral-600"
-              title="Sync with your phone or site"
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>Phone Sync</span>
             </button>
             <span className="text-neutral-300">|</span>
             <button
