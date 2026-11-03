@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Bot, 
   Copy, 
@@ -9,9 +9,17 @@ import {
   Database, 
   Workflow, 
   Code2, 
-  Sparkles
+  Sparkles,
+  Save,
+  RotateCw,
+  FileDown,
+  Upload,
+  AlertCircle,
+  CheckCircle2,
+  Play
 } from 'lucide-react';
-import { Page } from '../types';
+import { Page, SimpleDoData } from '../types';
+import { storage } from '../services/storage';
 
 interface AgentsPageProps {
   onNavigate: (page: Page) => void;
@@ -19,7 +27,191 @@ interface AgentsPageProps {
 
 export const AgentsPage: React.FC<AgentsPageProps> = ({ onNavigate }) => {
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'guide' | 'api' | 'recipes' | 'raw'>('guide');
+  const [activeTab, setActiveTab] = useState<'database' | 'guide' | 'api' | 'recipes' | 'raw'>('database');
+
+  // Live Database Editor State
+  const [dbText, setDbText] = useState<string>('');
+  const [dbError, setDbError] = useState<string | null>(null);
+  const [dbSuccess, setDbSuccess] = useState<string | null>(null);
+  const [stats, setStats] = useState({
+    tasks: 0,
+    activeTasks: 0,
+    inboxes: 0,
+    events: 0,
+    habits: 0,
+    dayPlans: 0
+  });
+
+  // Interactive JavaScript Evaluator
+  const [evalCode, setEvalCode] = useState<string>('window.storage.load()');
+  const [evalResult, setEvalResult] = useState<string | null>(null);
+  const [evalError, setEvalError] = useState<string | null>(null);
+
+  // Load current database into textarea
+  const refreshFromStorage = () => {
+    try {
+      const data = storage.load();
+      setDbText(JSON.stringify(data, null, 2));
+      setStats({
+        tasks: data.tasks.length,
+        activeTasks: data.tasks.filter((t) => !t.completed).length,
+        inboxes: data.inboxes.length,
+        events: (data.events || []).length,
+        habits: data.habits.length,
+        dayPlans: Object.keys(data.dayPlans || {}).length,
+      });
+      setDbError(null);
+    } catch (e: any) {
+      setDbError(`Failed to load database: ${e.message}`);
+    }
+  };
+
+  useEffect(() => {
+    refreshFromStorage();
+
+    // Listen to changes from other tabs or actions
+    const handleStorageChange = () => {
+      // Update stats without overwriting dirty editor text
+      try {
+        const data = storage.load();
+        setStats({
+          tasks: data.tasks.length,
+          activeTasks: data.tasks.filter((t) => !t.completed).length,
+          inboxes: data.inboxes.length,
+          events: (data.events || []).length,
+          habits: data.habits.length,
+          dayPlans: Object.keys(data.dayPlans || {}).length,
+        });
+      } catch (_) {}
+    };
+
+    window.addEventListener('simpledo:change', handleStorageChange);
+    return () => window.removeEventListener('simpledo:change', handleStorageChange);
+  }, []);
+
+  // Save changes from textarea to localStorage
+  const handleSaveDb = () => {
+    try {
+      const parsed: SimpleDoData = JSON.parse(dbText);
+      if (typeof parsed !== 'object' || parsed === null) {
+        throw new Error('Database root must be a valid JSON object');
+      }
+      if (!Array.isArray(parsed.tasks)) parsed.tasks = [];
+      if (!Array.isArray(parsed.inboxes)) parsed.inboxes = [];
+      if (!Array.isArray(parsed.events)) parsed.events = [];
+      if (!Array.isArray(parsed.habits)) parsed.habits = [];
+      if (typeof parsed.dayPlans !== 'object' || parsed.dayPlans === null) parsed.dayPlans = {};
+
+      storage.save(parsed);
+      setDbError(null);
+      setDbSuccess(
+        `Database updated successfully! Saved ${parsed.tasks.length} tasks, ${parsed.inboxes.length} inboxes, ${(parsed.events || []).length} events.`
+      );
+      setStats({
+        tasks: parsed.tasks.length,
+        activeTasks: parsed.tasks.filter((t) => !t.completed).length,
+        inboxes: parsed.inboxes.length,
+        events: (parsed.events || []).length,
+        habits: parsed.habits.length,
+        dayPlans: Object.keys(parsed.dayPlans || {}).length,
+      });
+      setTimeout(() => setDbSuccess(null), 4000);
+    } catch (err: any) {
+      setDbError(`Invalid JSON: ${err.message}`);
+      setDbSuccess(null);
+    }
+  };
+
+  // Format JSON indentation
+  const handleFormatDb = () => {
+    try {
+      const parsed = JSON.parse(dbText);
+      setDbText(JSON.stringify(parsed, null, 2));
+      setDbError(null);
+    } catch (err: any) {
+      setDbError(`Cannot format: ${err.message}`);
+    }
+  };
+
+  // Copy DB JSON
+  const handleCopyDb = () => {
+    navigator.clipboard.writeText(dbText);
+    setDbSuccess('Database JSON copied to clipboard!');
+    setTimeout(() => setDbSuccess(null), 2500);
+  };
+
+  // Download DB as JSON file
+  const handleDownloadDb = () => {
+    const blob = new Blob([dbText], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `simpledo_db_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Upload/Import DB JSON file
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        const parsed = JSON.parse(content);
+        setDbText(JSON.stringify(parsed, null, 2));
+        setDbError(null);
+        setDbSuccess(`File "${file.name}" loaded into editor. Click "Save & Apply Database" to persist.`);
+      } catch (err: any) {
+        setDbError(`Failed to parse uploaded file: ${err.message}`);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
+
+  // Reset to clean template
+  const handleResetToClean = () => {
+    if (confirm('Replace editor content with an empty database template? You must click "Save & Apply Database" to commit.')) {
+      const emptyDb: SimpleDoData = {
+        tasks: [],
+        events: [],
+        inboxes: [
+          {
+            id: 'inbox-general',
+            name: 'General',
+            description: 'Default Inbox',
+            color: '#171717',
+            createdAt: new Date().toISOString(),
+          },
+        ],
+        habits: [],
+        dayPlans: {},
+      };
+      setDbText(JSON.stringify(emptyDb, null, 2));
+      setDbError(null);
+      setDbSuccess('Clean template loaded. Click "Save & Apply Database" to persist.');
+    }
+  };
+
+  // Run interactive JavaScript
+  const handleRunEval = () => {
+    try {
+      setEvalError(null);
+      // Execute in browser context with storage in scope
+      const fn = new Function('storage', `return (${evalCode});`);
+      const result = fn(storage);
+      setEvalResult(
+        typeof result === 'object' && result !== null
+          ? JSON.stringify(result, null, 2)
+          : String(result)
+      );
+    } catch (err: any) {
+      setEvalError(err.message || 'Execution error');
+      setEvalResult(null);
+    }
+  };
 
   const rawInstructionsText = `# SimpleDo — Autonomous Agent Operational Manual & API Protocol
 
@@ -220,17 +412,17 @@ const today = new Date().toISOString().split('T')[0];
 window.storage.addTask({
   title: 'Review pull requests',
   priority: 'high',
-  inboxId: 'inbox-work',
+  inboxId: 'inbox-general',
   scheduledDate: today
 });
 
 // 2. Schedule a meeting event
 window.storage.addEvent({
-  title: 'Architecture Sync',
+  title: 'Weekly Sprint Retrospective',
   date: today,
-  time: '3:00 PM',
+  time: '2:00 PM',
   location: 'Google Meet',
-  inboxId: 'inbox-work'
+  inboxId: 'inbox-general'
 });
 
 // 3. Set progress on a task to 3/4
@@ -265,7 +457,7 @@ console.log({ activeTodayTasks, activeTodayEvents });
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn max-w-4xl mx-auto">
+    <div className="space-y-8 animate-fadeIn max-w-5xl mx-auto">
       {/* Top Banner & Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#ebebeb]">
         <div className="space-y-1">
@@ -284,11 +476,11 @@ console.log({ activeTodayTasks, activeTodayEvents });
               </h1>
             </div>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-neutral-900 text-white font-medium">
-              v4.0 Protocol
+              Live Database & Agent Hub
             </span>
           </div>
           <p className="text-xs text-neutral-500 pl-8">
-            Complete instructions and operational specification for AI agents manipulating SimpleDo.
+            Directly view and edit the live database, run commands, and review operational instructions for autonomous agents.
           </p>
         </div>
 
@@ -299,7 +491,7 @@ console.log({ activeTodayTasks, activeTodayEvents });
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-neutral-900 text-white hover:bg-neutral-800 rounded-md transition-colors shadow-2xs"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? 'Copied Instructions' : 'Copy Instructions'}</span>
+            <span>{copied ? 'Copied Manual' : 'Copy Manual'}</span>
           </button>
 
           <button
@@ -313,13 +505,14 @@ console.log({ activeTodayTasks, activeTodayEvents });
         </div>
       </div>
 
-      {/* Navigation Pills */}
+      {/* Navigation Tabs */}
       <div className="flex items-center gap-1.5 border-b border-[#ebebeb] pb-3 text-xs font-mono overflow-x-auto no-scrollbar">
         {[
+          { id: 'database', label: '🗄️ Live Database Editor', icon: Database },
           { id: 'guide', label: '📖 Overview & Logic', icon: Workflow },
           { id: 'api', label: '⚡ storage API Reference', icon: Database },
-          { id: 'recipes', label: '🤖 Agent Code Recipes', icon: Code2 },
-          { id: 'raw', label: '📄 Raw Markdown Document', icon: Terminal },
+          { id: 'recipes', label: '🤖 Code Recipes & Console', icon: Code2 },
+          { id: 'raw', label: '📄 Raw AGENTS.md', icon: Terminal },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -340,7 +533,206 @@ console.log({ activeTodayTasks, activeTodayEvents });
         })}
       </div>
 
-      {/* Tab 1: Overview & Page Logic */}
+      {/* ======================================================== */}
+      {/* TAB 1: LIVE EDITABLE DATABASE (DIRECT LINK & TEXTBOX) */}
+      {/* ======================================================== */}
+      {activeTab === 'database' && (
+        <div className="space-y-6">
+          {/* Live DB Stats Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            <div className="p-3 bg-white border border-[#ebebeb] rounded-lg shadow-2xs">
+              <span className="text-[10px] font-mono text-neutral-400 block uppercase">Tasks</span>
+              <span className="text-base font-bold text-neutral-900 font-mono">
+                {stats.tasks} <span className="text-xs font-normal text-neutral-400">({stats.activeTasks} active)</span>
+              </span>
+            </div>
+            <div className="p-3 bg-white border border-[#ebebeb] rounded-lg shadow-2xs">
+              <span className="text-[10px] font-mono text-neutral-400 block uppercase">Inboxes</span>
+              <span className="text-base font-bold text-neutral-900 font-mono">{stats.inboxes}</span>
+            </div>
+            <div className="p-3 bg-white border border-[#ebebeb] rounded-lg shadow-2xs">
+              <span className="text-[10px] font-mono text-neutral-400 block uppercase">Events</span>
+              <span className="text-base font-bold text-neutral-900 font-mono">{stats.events}</span>
+            </div>
+            <div className="p-3 bg-white border border-[#ebebeb] rounded-lg shadow-2xs">
+              <span className="text-[10px] font-mono text-neutral-400 block uppercase">Habits</span>
+              <span className="text-base font-bold text-neutral-900 font-mono">{stats.habits}</span>
+            </div>
+            <div className="p-3 bg-white border border-[#ebebeb] rounded-lg shadow-2xs">
+              <span className="text-[10px] font-mono text-neutral-400 block uppercase">Day Plans</span>
+              <span className="text-base font-bold text-neutral-900 font-mono">{stats.dayPlans}</span>
+            </div>
+            <div className="p-3 bg-white border border-[#ebebeb] rounded-lg shadow-2xs">
+              <span className="text-[10px] font-mono text-neutral-400 block uppercase">Storage Key</span>
+              <span className="text-xs font-mono text-neutral-700 font-medium truncate block" title="simpledo_data_v4">
+                v4 (localStorage)
+              </span>
+            </div>
+          </div>
+
+          {/* Feedback Alerts */}
+          {dbSuccess && (
+            <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-mono flex items-center gap-2 animate-fadeIn">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span>{dbSuccess}</span>
+            </div>
+          )}
+
+          {dbError && (
+            <div className="p-3.5 bg-red-50 border border-red-200 text-red-800 rounded-lg text-xs font-mono flex items-center gap-2 animate-fadeIn">
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+              <span>{dbError}</span>
+            </div>
+          )}
+
+          {/* Editor Header & Actions */}
+          <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle overflow-hidden">
+            <div className="p-3 sm:px-4 bg-[#fafafa] border-b border-[#ebebeb] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-neutral-900" />
+                <span className="font-semibold text-neutral-900">Database JSON Editor</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-neutral-200 text-neutral-700">
+                  Live Read & Write
+                </span>
+              </div>
+
+              {/* Action Toolbar */}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleFormatDb}
+                  className="px-2.5 py-1 bg-white hover:bg-neutral-100 border border-[#ebebeb] rounded text-neutral-700 transition-colors"
+                  title="Format JSON with 2-space indentation"
+                >
+                  Format
+                </button>
+                <button
+                  type="button"
+                  onClick={refreshFromStorage}
+                  className="px-2.5 py-1 bg-white hover:bg-neutral-100 border border-[#ebebeb] rounded text-neutral-700 transition-colors inline-flex items-center gap-1"
+                  title="Reload current state from localStorage"
+                >
+                  <RotateCw className="w-3 h-3 text-neutral-500" />
+                  <span>Reload</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyDb}
+                  className="px-2.5 py-1 bg-white hover:bg-neutral-100 border border-[#ebebeb] rounded text-neutral-700 transition-colors inline-flex items-center gap-1"
+                  title="Copy full JSON to clipboard"
+                >
+                  <Copy className="w-3 h-3 text-neutral-500" />
+                  <span>Copy</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadDb}
+                  className="px-2.5 py-1 bg-white hover:bg-neutral-100 border border-[#ebebeb] rounded text-neutral-700 transition-colors inline-flex items-center gap-1"
+                  title="Download database file"
+                >
+                  <FileDown className="w-3 h-3 text-neutral-500" />
+                  <span>Export</span>
+                </button>
+                <label className="px-2.5 py-1 bg-white hover:bg-neutral-100 border border-[#ebebeb] rounded text-neutral-700 transition-colors inline-flex items-center gap-1 cursor-pointer">
+                  <Upload className="w-3 h-3 text-neutral-500" />
+                  <span>Import</span>
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={handleSaveDb}
+                  className="px-3 py-1 bg-neutral-900 hover:bg-neutral-800 text-white font-medium rounded transition-colors inline-flex items-center gap-1 shadow-2xs"
+                  title="Validate and save changes to localStorage"
+                >
+                  <Save className="w-3 h-3 text-white" />
+                  <span>Save & Apply Database</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Editable Textbox */}
+            <div className="relative">
+              <textarea
+                value={dbText}
+                onChange={(e) => {
+                  setDbText(e.target.value);
+                  setDbError(null);
+                }}
+                rows={22}
+                spellCheck={false}
+                placeholder="Database JSON..."
+                className="w-full p-4 font-mono text-xs text-neutral-900 bg-white focus:outline-none resize-y leading-relaxed"
+              />
+            </div>
+
+            {/* Bottom Footer Information */}
+            <div className="p-3 bg-[#fafafa] border-t border-[#ebebeb] flex items-center justify-between text-[11px] font-mono text-neutral-500">
+              <span>
+                Tip for Agents: Paste complete JSON here and click <strong>"Save & Apply Database"</strong>. All components update instantly.
+              </span>
+              <button
+                type="button"
+                onClick={handleResetToClean}
+                className="text-neutral-400 hover:text-red-600 transition-colors ml-4"
+                title="Load empty database template"
+              >
+                Reset Template
+              </button>
+            </div>
+          </div>
+
+          {/* Interactive Agent Command Evaluator */}
+          <div className="p-4 bg-white rounded-xl border border-[#ebebeb] shadow-subtle space-y-3 font-mono text-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-[#ebebeb]">
+              <div className="flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-neutral-900" />
+                <span className="font-semibold text-neutral-900">Agent Command Runner</span>
+                <span className="text-neutral-400 font-normal">Evaluate JavaScript expressions with storage in scope</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleRunEval}
+                className="px-3 py-1 bg-neutral-900 hover:bg-neutral-800 text-white rounded font-medium inline-flex items-center gap-1.5 transition-colors shadow-2xs"
+              >
+                <Play className="w-3 h-3 fill-white" />
+                <span>Run</span>
+              </button>
+            </div>
+
+            <input
+              type="text"
+              value={evalCode}
+              onChange={(e) => setEvalCode(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleRunEval();
+              }}
+              placeholder="e.g. storage.addTask({ title: 'Agent Created Task', scheduledDate: '2026-11-02' })"
+              className="w-full px-3 py-2 bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900 text-neutral-900 text-xs font-mono"
+            />
+
+            {evalError && (
+              <div className="p-2 bg-red-50 text-red-700 border border-red-200 rounded text-[11px]">
+                Error: {evalError}
+              </div>
+            )}
+
+            {evalResult && (
+              <pre className="p-3 bg-[#fafafa] border border-[#ebebeb] rounded max-h-48 overflow-y-auto text-neutral-800 text-[11px] leading-relaxed">
+                {evalResult}
+              </pre>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 2: OVERVIEW & PAGE LOGIC */}
+      {/* ======================================================== */}
       {activeTab === 'guide' && (
         <div className="space-y-8 text-neutral-800 text-sm leading-relaxed">
           {/* Quick Core Rules Box */}
@@ -452,7 +844,9 @@ console.log({ activeTodayTasks, activeTodayEvents });
         </div>
       )}
 
-      {/* Tab 2: Storage API Reference */}
+      {/* ======================================================== */}
+      {/* TAB 3: STORAGE API REFERENCE */}
+      {/* ======================================================== */}
       {activeTab === 'api' && (
         <div className="space-y-6">
           <div className="p-4 bg-neutral-900 text-neutral-100 rounded-xl font-mono text-xs space-y-2">
@@ -533,7 +927,9 @@ console.log({ activeTodayTasks, activeTodayEvents });
         </div>
       )}
 
-      {/* Tab 3: Agent Code Recipes */}
+      {/* ======================================================== */}
+      {/* TAB 4: CODE RECIPES */}
+      {/* ======================================================== */}
       {activeTab === 'recipes' && (
         <div className="space-y-6">
           <div className="p-4 bg-white rounded-xl border border-[#ebebeb] shadow-subtle space-y-3 font-mono text-xs">
@@ -544,7 +940,7 @@ console.log({ activeTodayTasks, activeTodayEvents });
             <pre className="p-3 bg-[#fafafa] rounded border border-[#ebebeb] text-neutral-900 overflow-x-auto">
 {`const today = new Date().toISOString().split('T')[0];
 window.storage.addTask({
-  title: 'Write project documentation',
+  title: 'Review pull requests',
   priority: 'high',
   inboxId: 'inbox-general',
   scheduledDate: today
@@ -603,7 +999,9 @@ console.log('Today Schedule:', {
         </div>
       )}
 
-      {/* Tab 4: Raw Markdown Text */}
+      {/* ======================================================== */}
+      {/* TAB 5: RAW MARKDOWN TEXT */}
+      {/* ======================================================== */}
       {activeTab === 'raw' && (
         <div className="space-y-3">
           <div className="flex items-center justify-between text-xs text-neutral-500 font-mono">

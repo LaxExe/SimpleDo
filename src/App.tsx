@@ -13,11 +13,11 @@ export function App() {
   const [currentPage, setCurrentPage] = useState<Page>('today');
   const data = useSimpleDoData();
 
-  // Listen to hash changes (e.g. /#agents or /#.agents)
+  // Listen to hash changes (e.g. /#agents, /#.agents, /#database, /#db)
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.toLowerCase().replace('#', '').replace('/', '');
-      if (hash === 'agents' || hash === '.agents') {
+      if (hash === 'agents' || hash === '.agents' || hash === 'database' || hash === 'db') {
         setCurrentPage('agents');
       }
     };
