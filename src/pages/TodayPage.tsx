@@ -106,12 +106,18 @@ export const TodayPage: React.FC<TodayPageProps> = ({
 
   const isToday = selectedDate === todayStr;
 
-  // Pretty format date
+  // Pretty format dates
   const formattedDate = new Date(`${selectedDate}T00:00:00`).toLocaleDateString('en-US', {
-    weekday: 'long',
+    weekday: 'short',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+  });
+
+  const formattedDateShort = new Date(`${selectedDate}T00:00:00`).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
   });
 
   const handleAddTaskToDay = (e: React.FormEvent) => {
@@ -188,54 +194,59 @@ export const TodayPage: React.FC<TodayPageProps> = ({
   const habitsDoneOnDate = plannedHabits.filter((h) => h.completedDates.includes(selectedDate)).length;
 
   return (
-    <div className="space-y-12 animate-fadeIn">
-      {/* Date Switcher Bar */}
-      <div className="flex items-center justify-between pb-3 border-b border-[#ebebeb]">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handlePrevDay}
-            className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-[#fafafa] rounded-md border border-[#ebebeb] transition-colors shadow-2xs"
-            title="Previous Day"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-xs font-mono text-neutral-500">{formattedDate}</span>
-          <button
-            onClick={handleNextDay}
-            className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-[#fafafa] rounded-md border border-[#ebebeb] transition-colors shadow-2xs"
-            title="Next Day"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {!isToday && (
-            <button
-              onClick={() => setSelectedDate(todayStr)}
-              className="text-xs font-mono text-neutral-500 hover:text-neutral-900 underline"
-            >
-              Return to Today
-            </button>
-          )}
-          <span className="text-xs font-mono text-neutral-600 bg-white px-3 py-1 rounded-full border border-[#ebebeb] shadow-2xs">
-            {completedPlannedTasks}/{plannedTasks.length} tasks • {habitsDoneOnDate}/{plannedHabits.length} habits
-          </span>
-        </div>
-      </div>
-
+    <div className="space-y-6 sm:space-y-10 animate-fadeIn">
       {/* ======================================================== */}
-      {/* 1. TOP SECTION: LARGE TEXT "TODAY" LISTING TASKS */}
+      {/* 1. TOP SECTION: STREAMLINED UNIFIED HEADER & TASKS */}
       {/* ======================================================== */}
-      <section className="space-y-6">
+      <section className="space-y-4 sm:space-y-6">
         <div>
-          <div className="flex items-baseline justify-between">
-            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-neutral-900">
-              {isToday ? 'Today' : formattedDate.split(',')[0]}
-            </h1>
-            <span className="text-xs font-mono text-neutral-400">
-              {plannedTasks.length} {plannedTasks.length === 1 ? 'task' : 'tasks'} for today
-            </span>
+          {/* Unified Clean Header Row */}
+          <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#ebebeb]">
+            {/* Title + Stepper Controls */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-neutral-900">
+                {isToday ? 'Today' : formattedDateShort}
+              </h1>
+
+              <div className="flex items-center bg-white p-0.5 rounded-lg border border-[#ebebeb] shadow-2xs">
+                <button
+                  onClick={handlePrevDay}
+                  className="p-1 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+                  title="Previous Day"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-[11px] font-mono text-neutral-500 px-1.5 hidden md:inline">
+                  {formattedDate}
+                </span>
+                <button
+                  onClick={handleNextDay}
+                  className="p-1 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+                  title="Next Day"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {!isToday && (
+                <button
+                  onClick={() => setSelectedDate(todayStr)}
+                  className="text-xs font-mono text-neutral-500 hover:text-neutral-900 underline ml-0.5"
+                >
+                  Return to Today
+                </button>
+              )}
+            </div>
+
+            {/* Right side stats */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-neutral-400">
+                {plannedTasks.length} {plannedTasks.length === 1 ? 'task' : 'tasks'}
+              </span>
+              <span className="hidden sm:inline-flex text-xs font-mono text-neutral-600 bg-white px-2.5 py-1 rounded-full border border-[#ebebeb] shadow-2xs">
+                {completedPlannedTasks}/{plannedTasks.length} tasks • {habitsDoneOnDate}/{plannedHabits.length} habits
+              </span>
+            </div>
           </div>
         </div>
 

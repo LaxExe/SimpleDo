@@ -53,7 +53,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     <>
       {/* Top Header: Clean Minimal Bar */}
       <header className="sticky top-0 z-40 bg-[#fafafa]/90 backdrop-blur-md border-b border-[#ebebeb] pt-safe">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-12 sm:h-16 flex items-center justify-between">
           {/* Brand: just "simple do", no icon */}
           <div 
             onClick={() => onNavigate('today')}
@@ -97,8 +97,8 @@ export const Navigation: React.FC<NavigationProps> = ({
             })}
           </nav>
 
-          {/* Quick Date Display */}
-          <div className="flex items-center text-xs text-neutral-500 font-mono">
+          {/* Quick Date Display (Desktop only to prevent mobile clutter) */}
+          <div className="hidden sm:flex items-center text-xs text-neutral-500 font-mono">
             {new Date().toLocaleDateString('en-US', {
               weekday: 'short',
               month: 'short',
