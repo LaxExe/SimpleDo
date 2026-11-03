@@ -1,4 +1,5 @@
 import { SimpleDoData, Task, InboxGroup, Habit, DayPlan, InboxEvent } from '../types';
+import { pushToFirebase, initFirebaseSync } from './firebase';
 
 const STORAGE_KEY = 'simpledo_data_v4';
 const EVENT_NAME = 'simpledo:change';
@@ -161,10 +162,13 @@ export const storage = {
     }
   },
 
-  save(data: SimpleDoData) {
+  save(data: SimpleDoData, skipFirebase = false) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       window.dispatchEvent(new Event(EVENT_NAME));
+      if (!skipFirebase) {
+        pushToFirebase(data).catch(() => {});
+      }
     } catch (e) {
       console.error('Failed to save to localStorage', e);
     }
@@ -661,3 +665,14 @@ export const storage = {
     }
   },
 };
+
+// Initialize real-time two-way synchronization with Firebase Realtime Database
+if (typeof window !== 'undefined') {
+  initFirebaseSync(
+    (remoteData) => {
+      // Remote change received from phone/laptop: apply to local storage without re-pushing
+      storage.save(remoteData, true);
+    },
+    () => storage.load()
+  );
+}
