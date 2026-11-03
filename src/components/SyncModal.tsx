@@ -66,9 +66,12 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+    <div 
+      className="fixed inset-0 z-50 bg-neutral-900/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn"
+      onClick={onClose}
+    >
       <div 
-        className="bg-white rounded-xl border border-[#ebebeb] shadow-modal max-w-lg w-full p-5 sm:p-6 space-y-6 animate-scaleIn max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-t-2xl sm:rounded-xl border border-[#ebebeb] shadow-modal max-w-lg w-full p-5 sm:p-6 space-y-6 animate-scaleIn max-h-[90vh] overflow-y-auto pb-safe"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

@@ -496,7 +496,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
                   <button
                     onClick={(e) => startEditInbox(inbox, e)}
                     className={`p-1 rounded transition-opacity ${
-                      isSelected ? 'text-white/70 hover:text-white' : 'text-neutral-400 hover:text-neutral-900 opacity-0 group-hover:opacity-100'
+                      isSelected ? 'text-white/70 hover:text-white' : 'text-neutral-400 hover:text-neutral-900 opacity-100 sm:opacity-0 sm:group-hover:opacity-100'
                     }`}
                     title="Customize inbox color and name"
                   >
@@ -516,7 +516,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
                         }
                       }}
                       className={`p-1 rounded transition-opacity ${
-                        isSelected ? 'text-white/70 hover:text-red-300' : 'text-neutral-400 hover:text-red-500 opacity-0 group-hover:opacity-100'
+                        isSelected ? 'text-white/70 hover:text-red-300' : 'text-neutral-400 hover:text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100'
                       }`}
                       title="Delete inbox"
                     >

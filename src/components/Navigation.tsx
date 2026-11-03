@@ -50,20 +50,67 @@ export const Navigation: React.FC<NavigationProps> = ({
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-[#fafafa]/90 backdrop-blur-md border-b border-[#ebebeb]">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        {/* Brand: just "simple do", no icon, no subtitle */}
-        <div 
-          onClick={() => onNavigate('today')}
-          className="cursor-pointer select-none"
-        >
-          <span className="font-semibold text-base tracking-tight text-neutral-900 lowercase hover:opacity-80 transition-opacity">
-            simple do
-          </span>
-        </div>
+    <>
+      {/* Top Header: Clean Minimal Bar */}
+      <header className="sticky top-0 z-40 bg-[#fafafa]/90 backdrop-blur-md border-b border-[#ebebeb] pt-safe">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+          {/* Brand: just "simple do", no icon */}
+          <div 
+            onClick={() => onNavigate('today')}
+            className="cursor-pointer select-none"
+          >
+            <span className="font-semibold text-base sm:text-lg tracking-tight text-neutral-900 lowercase hover:opacity-80 transition-opacity">
+              simple do
+            </span>
+          </div>
 
-        {/* 4 Tabs Navigation */}
-        <nav className="flex items-center p-1 bg-[#ebebeb]/60 rounded-full border border-[#ebebeb]">
+          {/* Desktop Navigation Tabs */}
+          <nav className="hidden sm:flex items-center p-1 bg-[#ebebeb]/60 rounded-full border border-[#ebebeb]">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = currentPage === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => onNavigate(tab.id)}
+                  className={`relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-full transition-all duration-150 select-none ${
+                    isActive
+                      ? 'bg-white text-neutral-900 shadow-sm'
+                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/50'
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-neutral-900' : 'text-neutral-500'}`} />
+                  <span>{tab.label}</span>
+                  {tab.badge !== undefined && (
+                    <span
+                      className={`ml-0.5 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-medium ${
+                        isActive
+                          ? 'bg-neutral-200 text-neutral-900'
+                          : 'bg-neutral-200/70 text-neutral-600'
+                      }`}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Quick Date Display */}
+          <div className="flex items-center text-xs text-neutral-500 font-mono">
+            {new Date().toLocaleDateString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+            })}
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile Bottom Navigation Bar (iOS / Native App Feel) */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#ebebeb] px-3 py-1.5 pb-safe shadow-modal">
+        <div className="grid grid-cols-4 gap-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = currentPage === tab.id;
@@ -71,39 +118,28 @@ export const Navigation: React.FC<NavigationProps> = ({
               <button
                 key={tab.id}
                 onClick={() => onNavigate(tab.id)}
-                className={`relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-full transition-all duration-150 select-none ${
+                className={`flex flex-col items-center justify-center py-1.5 px-2 rounded-xl transition-all relative ${
                   isActive
-                    ? 'bg-white text-neutral-900 shadow-sm'
-                    : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/50'
+                    ? 'text-neutral-900 font-semibold bg-neutral-100/70'
+                    : 'text-neutral-500 hover:text-neutral-900'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-neutral-900' : 'text-neutral-500'}`} />
-                <span>{tab.label}</span>
-                {tab.badge !== undefined && (
-                  <span
-                    className={`ml-0.5 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-medium ${
-                      isActive
-                        ? 'bg-neutral-200 text-neutral-900'
-                        : 'bg-neutral-200/70 text-neutral-600'
-                    }`}
-                  >
-                    {tab.badge}
-                  </span>
-                )}
+                <div className="relative">
+                  <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
+                  {tab.badge !== undefined && (
+                    <span className="absolute -top-1 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-neutral-900 text-white text-[9px] font-mono font-bold flex items-center justify-center">
+                      {tab.badge}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] tracking-tight mt-1">
+                  {tab.label}
+                </span>
               </button>
             );
           })}
-        </nav>
-
-        {/* Quick Date Indicator */}
-        <div className="hidden sm:flex items-center text-xs text-neutral-500 font-mono">
-          {new Date().toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-          })}
         </div>
-      </div>
-    </header>
+      </nav>
+    </>
   );
 };

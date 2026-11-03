@@ -1,0 +1,16 @@
+{
+  "name": "simple do",
+  "short_name": "simple do",
+  "description": "Minimalist local-first task and habit manager",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#171717",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

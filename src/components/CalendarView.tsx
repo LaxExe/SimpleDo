@@ -128,8 +128,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       {/* Weekday Header */}
       <div className="grid grid-cols-7 border-b border-[#ebebeb] bg-[#fafafa]/80 text-center text-xs font-mono font-medium text-neutral-500">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((weekday) => (
-          <div key={weekday} className="py-2.5 border-r last:border-r-0 border-[#ebebeb]">
-            {weekday}
+          <div key={weekday} className="py-2 sm:py-2.5 border-r last:border-r-0 border-[#ebebeb]">
+            <span className="hidden sm:inline">{weekday}</span>
+            <span className="sm:hidden">{weekday[0]}</span>
           </div>
         ))}
       </div>
@@ -141,7 +142,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             return (
               <div
                 key={`empty-${idx}`}
-                className="min-h-[90px] sm:min-h-[115px] bg-[#fafafa]/50 p-1.5"
+                className="min-h-[85px] sm:min-h-[130px] bg-[#fafafa]/50 p-1 sm:p-1.5"
               />
             );
           }
@@ -181,7 +182,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   onDropHabitOnDate(habitId, cell.dateStr);
                 }
               }}
-              className={`min-h-[110px] sm:min-h-[130px] h-full p-2 sm:p-2.5 flex flex-col justify-start gap-1.5 cursor-pointer transition-all select-none group ${
+              className={`min-h-[85px] sm:min-h-[130px] h-full p-1 sm:p-2.5 flex flex-col justify-start gap-1 sm:gap-1.5 cursor-pointer transition-all select-none group ${
                 isSelected
                   ? 'bg-neutral-100/60 ring-2 ring-inset ring-neutral-900 z-10'
                   : isOver
@@ -194,7 +195,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               {/* Day Header: Number + Indicators */}
               <div className="flex items-center justify-between mb-0.5">
                 <span
-                  className={`text-xs font-mono font-medium inline-flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
+                  className={`text-[11px] sm:text-xs font-mono font-medium inline-flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-colors ${
                     isToday
                       ? 'bg-neutral-900 text-white font-bold'
                       : isSelected
@@ -209,10 +210,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   {/* Habit indicator if habits scheduled */}
                   {plannedHabitsCount > 0 && (
                     <span
-                      className="inline-flex items-center gap-0.5 text-[10px] font-mono text-orange-600 bg-orange-50 px-1.5 py-0.2 rounded"
+                      className="inline-flex items-center gap-0.5 text-[9px] sm:text-[10px] font-mono text-orange-600 bg-orange-50 px-1 sm:px-1.5 py-0.2 rounded"
                       title={`${plannedHabitsCount} habits planned`}
                     >
-                      <Flame className="w-2.5 h-2.5 fill-orange-500 text-orange-500" />
+                      <Flame className="w-2 sm:w-2.5 h-2 sm:h-2.5 fill-orange-500 text-orange-500" />
                       <span>{plannedHabitsCount}</span>
                     </span>
                   )}
@@ -235,7 +236,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                           ? { backgroundColor: taskInbox?.color || '#171717', color: '#ffffff' }
                           : undefined
                       }
-                      className={`text-[10px] truncate px-1.5 py-0.5 rounded flex items-center gap-1 border transition-colors ${
+                      className={`text-[9px] sm:text-[10px] truncate px-1 sm:px-1.5 py-0.5 rounded flex items-center gap-1 border transition-colors ${
                         task.completed
                           ? 'bg-neutral-100 text-neutral-400 border-neutral-200 line-through'
                           : isDueActive
@@ -281,7 +282,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                           backgroundColor: evtInbox?.color || '#171717',
                           color: '#ffffff',
                         }}
-                        className="text-[10px] truncate px-1.5 py-0.5 rounded flex items-center gap-1 border border-transparent text-white font-medium shadow-2xs"
+                        className="text-[9px] sm:text-[10px] truncate px-1 sm:px-1.5 py-0.5 rounded flex items-center gap-1 border border-transparent text-white font-medium shadow-2xs"
                         title={`${evt.title} (${evt.time || 'All day'}${evt.location ? ` - ${evt.location}` : ''})`}
                       >
                         <Clock className="w-2.5 h-2.5 text-white/90 flex-shrink-0" />

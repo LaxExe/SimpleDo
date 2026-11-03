@@ -92,7 +92,7 @@ export function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-3.5 sm:px-6 py-5 sm:py-8 pb-28 sm:pb-8">
         {currentPage === 'today' && (
           <TodayPage
             tasks={data.tasks}
@@ -123,9 +123,9 @@ export function App() {
 
       {/* Sync Success Notification Banner */}
       {syncNotice && (
-        <div className="fixed bottom-16 left-1/2 -translate-x-1/2 z-50 bg-neutral-900 text-white px-4 py-2.5 rounded-full shadow-modal text-xs font-mono flex items-center gap-2 animate-fadeIn">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>{syncNotice}</span>
+        <div className="fixed bottom-20 sm:bottom-16 left-1/2 -translate-x-1/2 z-50 bg-neutral-900 text-white px-4 py-2.5 rounded-full shadow-modal text-xs font-mono flex items-center gap-2 animate-fadeIn max-w-[90vw]">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+          <span className="truncate">{syncNotice}</span>
         </div>
       )}
 

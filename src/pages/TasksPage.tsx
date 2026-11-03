@@ -113,7 +113,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
             onChange={(e) => setTitle(e.target.value)}
             placeholder="What needs to be done?"
             autoFocus
-            className="w-full px-3 py-2 text-sm bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900 transition-colors"
+            className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900 transition-colors shadow-2xs"
           />
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1.5">
@@ -176,7 +176,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
 
       {/* Filters and Stats */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-        <div className="flex items-center gap-1 bg-[#ebebeb]/50 p-1 rounded-full border border-[#ebebeb] w-fit">
+        <div className="flex items-center gap-1 bg-[#ebebeb]/50 p-1 rounded-full border border-[#ebebeb] w-full sm:w-fit overflow-x-auto no-scrollbar">
           {(['all', 'active', 'completed', 'high'] as const).map((mode) => (
             <button
               key={mode}

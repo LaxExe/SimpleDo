@@ -53,9 +53,9 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+    <div className="fixed inset-0 z-50 bg-neutral-900/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn">
       <div 
-        className="bg-white rounded-xl border border-[#ebebeb] shadow-modal max-w-lg w-full p-6 space-y-5 animate-scaleIn"
+        className="bg-white rounded-t-2xl sm:rounded-xl border border-[#ebebeb] shadow-modal max-w-lg w-full p-5 sm:p-6 space-y-5 animate-scaleIn max-h-[92vh] overflow-y-auto pb-safe"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -81,7 +81,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
               onChange={(e) => setTitle(e.target.value)}
               placeholder="What needs to be done?"
               autoFocus
-              className="w-full px-3 py-2 text-sm bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900 transition-colors"
+              className="w-full px-3 py-2 text-base sm:text-sm bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900 transition-colors"
             />
           </div>
 

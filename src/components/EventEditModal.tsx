@@ -47,9 +47,9 @@ export const EventEditModal: React.FC<EventEditModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-neutral-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+    <div className="fixed inset-0 z-50 bg-neutral-900/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn">
       <div 
-        className="bg-white rounded-xl border border-[#ebebeb] shadow-modal max-w-lg w-full p-6 space-y-5 animate-scaleIn"
+        className="bg-white rounded-t-2xl sm:rounded-xl border border-[#ebebeb] shadow-modal max-w-lg w-full p-5 sm:p-6 space-y-5 animate-scaleIn max-h-[92vh] overflow-y-auto pb-safe"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -73,7 +73,7 @@ export const EventEditModal: React.FC<EventEditModalProps> = ({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
+              className="w-full px-3 py-2 text-base sm:text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
               placeholder="e.g. Sprint Planning, Dental Checkup..."
               required
             />
@@ -89,7 +89,7 @@ export const EventEditModal: React.FC<EventEditModalProps> = ({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
+                className="w-full px-3 py-2 text-base sm:text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
                 required
               />
             </div>
@@ -104,7 +104,7 @@ export const EventEditModal: React.FC<EventEditModalProps> = ({
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
                 placeholder="e.g. 10:00 AM or 14:30"
-                className="w-full px-3 py-2 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
+                className="w-full px-3 py-2 text-base sm:text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
               />
             </div>
           </div>
@@ -119,7 +119,7 @@ export const EventEditModal: React.FC<EventEditModalProps> = ({
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="e.g. Zoom, Meeting Room 3, 123 Main St"
-              className="w-full px-3 py-2 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
+              className="w-full px-3 py-2 text-base sm:text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
             />
           </div>
 
@@ -131,7 +131,7 @@ export const EventEditModal: React.FC<EventEditModalProps> = ({
             <select
               value={inboxId}
               onChange={(e) => setInboxId(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
+              className="w-full px-3 py-2 text-base sm:text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
             >
               {inboxes.map((i) => (
                 <option key={i.id} value={i.id}>
@@ -150,7 +150,7 @@ export const EventEditModal: React.FC<EventEditModalProps> = ({
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
               placeholder="Agenda or notes for this event..."
-              className="w-full px-3 py-2 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
+              className="w-full px-3 py-2 text-base sm:text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900"
             />
           </div>
 

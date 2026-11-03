@@ -373,7 +373,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
 
                   <button
                     onClick={() => setEditingTask(task)}
-                    className={`p-1.5 rounded transition-colors ${
+                    className={`p-2 min-w-[32px] min-h-[32px] flex items-center justify-center rounded transition-colors ${
                       isDueToday
                         ? 'text-white/80 hover:text-white hover:bg-white/10'
                         : 'text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100'
@@ -386,7 +386,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                   {/* Clear, easy remove button */}
                   <button
                     onClick={() => handleRemoveTaskFromDay(task.id)}
-                    className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors ${
+                    className={`inline-flex items-center justify-center gap-1 text-xs p-2 sm:px-2 sm:py-1 min-w-[32px] min-h-[32px] rounded transition-colors ${
                       isDueToday
                         ? 'text-white/80 hover:text-white hover:bg-white/15'
                         : 'text-neutral-400 hover:text-red-600 hover:bg-red-50'
@@ -532,14 +532,14 @@ export const TodayPage: React.FC<TodayPageProps> = ({
             value={taskInput}
             onChange={(e) => setTaskInput(e.target.value)}
             placeholder="Plan a new task for today..."
-            className="flex-1 px-3.5 py-2 text-sm bg-white border border-[#ebebeb] rounded-lg focus:outline-none focus:border-neutral-900 transition-colors shadow-2xs"
+            className="flex-1 px-3.5 py-2.5 sm:py-2 text-base sm:text-sm bg-white border border-[#ebebeb] rounded-lg focus:outline-none focus:border-neutral-900 transition-colors shadow-2xs"
           />
           <button
             type="submit"
             disabled={!taskInput.trim()}
-            className="px-4 py-2 bg-neutral-900 text-white text-xs font-medium rounded-lg hover:bg-neutral-800 disabled:opacity-40 transition-colors inline-flex items-center gap-1.5 shadow-subtle"
+            className="px-4 py-2.5 sm:py-2 bg-neutral-900 text-white text-xs font-medium rounded-lg hover:bg-neutral-800 disabled:opacity-40 transition-colors inline-flex items-center justify-center gap-1.5 shadow-subtle min-w-[70px]"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
             <span>Add</span>
           </button>
         </form>
@@ -552,7 +552,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
           }}
           onDragLeave={() => setIsDropOver(false)}
           onDrop={handleDropOnDay}
-          className={`bg-white rounded-xl border p-5 shadow-subtle space-y-4 transition-all ${
+          className={`bg-white rounded-xl border p-4 sm:p-5 shadow-subtle space-y-4 transition-all ${
             isDropOver ? 'border-neutral-900 ring-2 ring-neutral-900/10 bg-neutral-50/50' : 'border-[#ebebeb]'
           }`}
         >
@@ -586,13 +586,13 @@ export const TodayPage: React.FC<TodayPageProps> = ({
           {/* Horizontal Scrolling Card Track (Sorted by Inbox with Matching Color) */}
           <div
             ref={planPoolScrollRef}
-            className="flex gap-4 overflow-x-auto scroll-smooth py-1 px-0.5 no-scrollbar items-start"
+            className="flex gap-3 sm:gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth py-1 px-0.5 no-scrollbar items-start"
           >
             {/* 1. Inbox Groups (sorted by inbox, matching inbox color) */}
             {tasksByInbox.map(({ inbox, tasks: inboxTasks }) => (
               <div
                 key={inbox.id}
-                className="w-64 flex-shrink-0 bg-[#fafafa] rounded-lg border border-[#ebebeb] p-3 space-y-2 flex flex-col justify-between"
+                className="w-[82vw] max-w-[270px] sm:w-64 snap-start flex-shrink-0 bg-[#fafafa] rounded-lg border border-[#ebebeb] p-3 space-y-2 flex flex-col justify-between shadow-2xs"
               >
                 <div className="flex items-center justify-between pb-1.5 border-b border-[#ebebeb]/80">
                   <div className="flex items-center gap-1.5 min-w-0 pr-1">
@@ -645,7 +645,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
             ))}
 
             {/* 2. Habits Group Column */}
-            <div className="w-64 flex-shrink-0 bg-[#fafafa] rounded-lg border border-[#ebebeb] p-3 space-y-2 flex flex-col justify-between">
+            <div className="w-[82vw] max-w-[270px] sm:w-64 snap-start flex-shrink-0 bg-[#fafafa] rounded-lg border border-[#ebebeb] p-3 space-y-2 flex flex-col justify-between shadow-2xs">
               <div className="flex items-center justify-between pb-1.5 border-b border-[#ebebeb]/80">
                 <div className="flex items-center gap-1.5 min-w-0 pr-1">
                   <Flame className="w-3 h-3 text-neutral-900" />
