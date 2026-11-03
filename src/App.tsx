@@ -8,12 +8,20 @@ import { InboxPage } from './pages/InboxPage';
 import { TrackerPage } from './pages/TrackerPage';
 import { AgentsPage } from './pages/AgentsPage';
 import { storage, getTodayStr } from './services/storage';
-import { CheckCircle2 } from 'lucide-react';
+import { subscribeToFirebaseStatus, SyncStatus } from './services/firebase';
+import { CheckCircle2, AlertTriangle, ExternalLink } from 'lucide-react';
 
 export function App() {
   const [currentPage, setCurrentPage] = useState<Page>('today');
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const [firebaseStatus, setFirebaseStatus] = useState<SyncStatus>('connecting');
   const data = useSimpleDoData();
+
+  useEffect(() => {
+    return subscribeToFirebaseStatus((status) => {
+      setFirebaseStatus(status);
+    });
+  }, []);
 
   // Listen to hash changes (e.g. /#agents, /#.agents, /#database, /#db, /#sync=...)
   useEffect(() => {
@@ -79,6 +87,23 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-[#fafafa] flex flex-col text-neutral-900 selection:bg-neutral-900 selection:text-white">
+      {/* Firebase Locked Mode Notice */}
+      {firebaseStatus === 'permission_denied' && (
+        <div className="bg-amber-500 text-neutral-950 px-4 py-2 text-xs font-mono text-center flex items-center justify-center gap-2 border-b border-amber-600 shadow-2xs z-50">
+          <AlertTriangle className="w-4 h-4 text-neutral-950 flex-shrink-0" />
+          <span>Firebase Database is in <strong>Locked Mode</strong>. Sync is paused until rules are updated.</span>
+          <a
+            href="https://console.firebase.google.com/project/simple-do-c5438/database/simple-do-c5438-default-rtdb/rules"
+            target="_blank"
+            rel="noreferrer"
+            className="underline font-bold inline-flex items-center gap-0.5 ml-1 hover:text-black"
+          >
+            <span>Set rules to true</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      )}
+
       {/* Top Header / Navigation */}
       <Navigation
         currentPage={currentPage}
