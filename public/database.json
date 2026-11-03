@@ -1,0 +1,15 @@
+{
+  "tasks": [],
+  "events": [],
+  "inboxes": [
+    {
+      "id": "inbox-general",
+      "name": "General",
+      "description": "Quick catch-all",
+      "color": "#171717",
+      "createdAt": "2026-11-02T00:00:00.000Z"
+    }
+  ],
+  "habits": [],
+  "dayPlans": {}
+}

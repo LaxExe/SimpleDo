@@ -7,22 +7,47 @@ import { TasksPage } from './pages/TasksPage';
 import { InboxPage } from './pages/InboxPage';
 import { TrackerPage } from './pages/TrackerPage';
 import { AgentsPage } from './pages/AgentsPage';
+import { SyncModal } from './components/SyncModal';
 import { storage, getTodayStr } from './services/storage';
+import { Smartphone, CheckCircle2 } from 'lucide-react';
 
 export function App() {
   const [currentPage, setCurrentPage] = useState<Page>('today');
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
   const data = useSimpleDoData();
 
-  // Listen to hash changes (e.g. /#agents, /#.agents, /#database, /#db)
+  // Listen to hash changes (e.g. /#agents, /#.agents, /#database, /#db, /#sync=...)
   useEffect(() => {
     const handleHash = () => {
+      // 1. Check if URL contains sync payload from another device / QR code
+      if (window.location.hash.startsWith('#sync=')) {
+        const encoded = window.location.hash.replace('#sync=', '');
+        const success = storage.importFromSyncString(encoded);
+        if (success) {
+          setSyncNotice('Data successfully synced from your other device!');
+          setTimeout(() => setSyncNotice(null), 5000);
+          window.history.replaceState(null, '', window.location.pathname);
+          return;
+        }
+      }
+
+      // 2. Navigation hash routes
       const hash = window.location.hash.toLowerCase().replace('#', '').replace('/', '');
       if (hash === 'agents' || hash === '.agents' || hash === 'database' || hash === 'db') {
         setCurrentPage('agents');
       }
     };
+
     handleHash();
     window.addEventListener('hashchange', handleHash);
+
+    // If completely new device (like opening on a phone for the first time), auto-pull from site database
+    const hasLocal = localStorage.getItem('simpledo_data_v4');
+    if (!hasLocal) {
+      storage.pullFromSite();
+    }
+
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
@@ -96,6 +121,20 @@ export function App() {
         {currentPage === 'agents' && <AgentsPage onNavigate={setCurrentPage} />}
       </main>
 
+      {/* Sync Success Notification Banner */}
+      {syncNotice && (
+        <div className="fixed bottom-16 left-1/2 -translate-x-1/2 z-50 bg-neutral-900 text-white px-4 py-2.5 rounded-full shadow-modal text-xs font-mono flex items-center gap-2 animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{syncNotice}</span>
+        </div>
+      )}
+
+      {/* Cross-Device / Phone Sync Modal */}
+      <SyncModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+      />
+
       {/* Footer */}
       <footer className="border-t border-[#ebebeb] bg-[#fafafa] py-6 mt-auto">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-neutral-400">
@@ -136,6 +175,15 @@ export function App() {
               }`}
             >
               Tracker
+            </button>
+            <span className="text-neutral-300">|</span>
+            <button
+              onClick={() => setIsSyncModalOpen(true)}
+              className="hover:text-neutral-900 transition-colors inline-flex items-center gap-1 font-medium text-neutral-600"
+              title="Sync with your phone or site"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Phone Sync</span>
             </button>
             <span className="text-neutral-300">|</span>
             <button

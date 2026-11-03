@@ -559,4 +559,105 @@ export const storage = {
       dayPlans: {},
     });
   },
+
+  // ---------------- Remote Site & Cloud Sync ----------------
+  async pullFromSite(): Promise<boolean> {
+    try {
+      const baseUrl = (import.meta as any).env?.BASE_URL || '/';
+      const cleanBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+      const res = await fetch(`${cleanBase}database.json?t=${Date.now()}`);
+      if (!res.ok) return false;
+      const json: SimpleDoData = await res.json();
+      if (json && Array.isArray(json.tasks)) {
+        this.save(json);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.warn('Failed to pull from site:', e);
+      return false;
+    }
+  },
+
+  generateSyncUrl(): string {
+    const data = this.load();
+    const jsonStr = JSON.stringify(data);
+    const base64 = btoa(encodeURIComponent(jsonStr));
+    const baseUrl = window.location.origin + window.location.pathname;
+    return `${baseUrl}#sync=${base64}`;
+  },
+
+  importFromSyncString(encoded: string): boolean {
+    try {
+      const jsonStr = decodeURIComponent(atob(encoded));
+      const parsed: SimpleDoData = JSON.parse(jsonStr);
+      if (parsed && typeof parsed === 'object' && Array.isArray(parsed.tasks)) {
+        this.save(parsed);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error('Failed to parse sync string:', e);
+      return false;
+    }
+  },
+
+  async saveToGitHub(token: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const repo = 'LaxExe/SimpleDo';
+      const path = 'public/database.json';
+      const apiUrl = `https://api.github.com/repos/${repo}/contents/${path}`;
+
+      // 1. Get current file SHA if exists
+      let sha: string | undefined = undefined;
+      const getRes = await fetch(apiUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github.v3+json',
+        },
+      });
+
+      if (getRes.ok) {
+        const fileData = await getRes.json();
+        sha = fileData.sha;
+      }
+
+      // 2. Prepare payload
+      const currentData = this.load();
+      const contentStr = JSON.stringify(currentData, null, 2);
+      const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
+
+      const putRes = await fetch(apiUrl, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: 'Update database.json from SimpleDo client',
+          content: contentBase64,
+          sha,
+        }),
+      });
+
+      if (!putRes.ok) {
+        const errJson = await putRes.json().catch(() => ({}));
+        return {
+          success: false,
+          message: errJson.message || `GitHub error ${putRes.status}`,
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Successfully committed database.json to GitHub repository! GitHub Pages is now rebuilding with your updated data.',
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        message: e.message || 'Network error saving to GitHub',
+      };
+    }
+  },
 };
