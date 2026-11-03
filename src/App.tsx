@@ -58,26 +58,28 @@ export function App() {
   }, []);
 
   const todayStr = getTodayStr();
-  const dayPlan = data.dayPlans[todayStr] || {
+  const dayPlan = (data.dayPlans && data.dayPlans[todayStr]) || {
     date: todayStr,
     plannedTaskIds: [],
     plannedHabitIds: [],
   };
+  const plannedTaskIds = Array.isArray(dayPlan.plannedTaskIds) ? dayPlan.plannedTaskIds : [];
+  const plannedHabitIds = Array.isArray(dayPlan.plannedHabitIds) ? dayPlan.plannedHabitIds : [];
 
-  const todayTasksCount = data.tasks.filter(
+  const todayTasksCount = (data.tasks || []).filter(
     (t) =>
       !t.completed &&
-      (dayPlan.plannedTaskIds.includes(t.id) ||
+      (plannedTaskIds.includes(t.id) ||
         t.scheduledDate === todayStr ||
         t.dueDate === todayStr)
   ).length;
 
-  const pendingTasksCount = data.tasks.filter((t) => !t.completed).length;
-  const inboxTasksCount = data.tasks.length;
+  const pendingTasksCount = (data.tasks || []).filter((t) => !t.completed).length;
+  const inboxTasksCount = (data.tasks || []).length;
 
-  const assignedHabitsCount = dayPlan.plannedHabitIds.length;
-  const doneAssignedHabitsCount = data.habits.filter(
-    (h) => dayPlan.plannedHabitIds.includes(h.id) && h.completedDates.includes(todayStr)
+  const assignedHabitsCount = plannedHabitIds.length;
+  const doneAssignedHabitsCount = (data.habits || []).filter(
+    (h) => plannedHabitIds.includes(h.id) && Array.isArray(h.completedDates) && h.completedDates.includes(todayStr)
   ).length;
 
   const habitsTodayDone = {

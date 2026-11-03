@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
 import { storage } from './services/storage'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 // Expose storage API globally for autonomous agents & automated testing
 if (typeof window !== 'undefined') {
@@ -11,6 +12,8 @@ if (typeof window !== 'undefined') {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>,
 )

@@ -106,7 +106,7 @@ export function calculateCustomHabitStreak(
 
   for (let i = 0; i < plannedDates.length; i++) {
     const date = plannedDates[i];
-    const isCompleted = habit.completedDates.includes(date);
+    const isCompleted = Array.isArray(habit.completedDates) && habit.completedDates.includes(date);
 
     if (date === todayStr) {
       if (isCompleted) {
@@ -142,11 +142,29 @@ export const storage = {
       if (!parsed.inboxes || parsed.inboxes.length === 0) {
         parsed.inboxes = defaultInboxes;
       }
-      if (!parsed.dayPlans) {
+      if (!parsed.dayPlans || typeof parsed.dayPlans !== 'object') {
         parsed.dayPlans = defaultDayPlans;
+      } else {
+        Object.keys(parsed.dayPlans).forEach((dateKey) => {
+          const plan = parsed.dayPlans[dateKey];
+          if (plan) {
+            if (!Array.isArray(plan.plannedTaskIds)) plan.plannedTaskIds = [];
+            if (!Array.isArray(plan.plannedHabitIds)) plan.plannedHabitIds = [];
+          }
+        });
       }
       if (!parsed.events) {
         parsed.events = [];
+      }
+      if (parsed.habits && Array.isArray(parsed.habits)) {
+        parsed.habits = parsed.habits.map((h: Habit) => ({
+          ...h,
+          completedDates: Array.isArray(h.completedDates) ? h.completedDates : [],
+          streak: h.streak || 0,
+          bestStreak: h.bestStreak || 0,
+        }));
+      } else {
+        parsed.habits = [];
       }
       if (parsed.tasks) {
         parsed.tasks = parsed.tasks.map((t: Task) => ({
@@ -425,14 +443,19 @@ export const storage = {
   // ---------------- Day Plans & Drag/Drop Scheduling ----------------
   getDayPlan(date: string): DayPlan {
     const data = this.load();
-    if (!data.dayPlans[date]) {
+    if (!data.dayPlans || !data.dayPlans[date]) {
       return {
         date,
         plannedTaskIds: [],
         plannedHabitIds: [],
       };
     }
-    return data.dayPlans[date];
+    const plan = data.dayPlans[date];
+    return {
+      date: plan.date || date,
+      plannedTaskIds: Array.isArray(plan.plannedTaskIds) ? plan.plannedTaskIds : [],
+      plannedHabitIds: Array.isArray(plan.plannedHabitIds) ? plan.plannedHabitIds : [],
+    };
   },
 
   addTaskToDate(date: string, taskId: string) {

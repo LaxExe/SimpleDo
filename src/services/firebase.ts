@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getDatabase, ref, onValue, set, off } from 'firebase/database';
-import { SimpleDoData } from '../types';
+import { SimpleDoData, DayPlan } from '../types';
 
 export const firebaseConfig = {
   apiKey: "AIzaSyDMptOnosS2HA35NDLrH9lWZpFyQDHTlfw",
@@ -43,7 +43,8 @@ function setSyncStatus(newStatus: SyncStatus) {
 
 /**
  * Normalizes Firebase RTDB data. Firebase omits empty arrays/objects and
- * sometimes converts arrays to objects if numeric keys are sparse.
+ * converts arrays to objects if numeric keys are sparse.
+ * This guarantees plannedTaskIds, plannedHabitIds, and completedDates are always arrays.
  */
 export function normalizeFirebaseData(val: any): SimpleDoData {
   if (!val || typeof val !== 'object') {
@@ -63,10 +64,43 @@ export function normalizeFirebaseData(val: any): SimpleDoData {
     return [];
   };
 
+  // 1. DayPlans normalization
+  const normalizedDayPlans: Record<string, DayPlan> = {};
+  if (val.dayPlans && typeof val.dayPlans === 'object') {
+    Object.entries(val.dayPlans).forEach(([dateKey, plan]: [string, any]) => {
+      if (plan && typeof plan === 'object') {
+        normalizedDayPlans[dateKey] = {
+          date: plan.date || dateKey,
+          plannedTaskIds: toArray(plan.plannedTaskIds),
+          plannedHabitIds: toArray(plan.plannedHabitIds),
+        };
+      }
+    });
+  }
+
+  // 2. Habits normalization
+  const normalizedHabits = toArray(val.habits).map((h: any) => ({
+    ...h,
+    completedDates: toArray(h.completedDates),
+    streak: typeof h.streak === 'number' ? h.streak : 0,
+    bestStreak: typeof h.bestStreak === 'number' ? h.bestStreak : 0,
+  }));
+
+  // 3. Tasks normalization
+  const normalizedTasks = toArray(val.tasks).map((t: any) => ({
+    ...t,
+    hasProgress: Boolean(t.hasProgress),
+    totalParts: t.totalParts || 4,
+    completedParts: t.completed ? (t.totalParts || 4) : (t.completedParts ?? 0),
+  }));
+
+  // 4. Inboxes normalization
+  const normalizedInboxes = toArray(val.inboxes);
+
   return {
-    tasks: toArray(val.tasks),
+    tasks: normalizedTasks,
     events: toArray(val.events),
-    inboxes: toArray(val.inboxes).length > 0 ? toArray(val.inboxes) : [
+    inboxes: normalizedInboxes.length > 0 ? normalizedInboxes : [
       {
         id: 'inbox-general',
         name: 'General',
@@ -75,8 +109,8 @@ export function normalizeFirebaseData(val: any): SimpleDoData {
         createdAt: new Date().toISOString(),
       }
     ],
-    habits: toArray(val.habits),
-    dayPlans: val.dayPlans && typeof val.dayPlans === 'object' ? val.dayPlans : {},
+    habits: normalizedHabits,
+    dayPlans: normalizedDayPlans,
   };
 }
 
@@ -120,9 +154,9 @@ export function initFirebaseSync(
 
       if (val && typeof val === 'object') {
         const normalized = normalizeFirebaseData(val);
-        // Only apply remote data if it has content, or if local is also empty
         const local = getLocalData();
-        if (normalized.tasks.length > 0 || normalized.events.length > 0 || local.tasks.length === 0) {
+        // If remote has content or local is empty, apply remote
+        if (normalized.tasks.length > 0 || normalized.events.length > 0 || normalized.inboxes.length > 1 || local.tasks.length === 0) {
           isApplyingRemoteChange = true;
           try {
             onRemoteData(normalized);
@@ -138,7 +172,7 @@ export function initFirebaseSync(
       } else if (!val) {
         // Database is empty in Firebase: seed it from local device if local device has data
         const localData = getLocalData();
-        if (localData && (localData.tasks.length > 0 || localData.events?.length > 0)) {
+        if (localData && (localData.tasks.length > 0 || (localData.events && localData.events.length > 0))) {
           pushToFirebase(localData);
         }
       }

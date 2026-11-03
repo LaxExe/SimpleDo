@@ -55,13 +55,15 @@ export const TodayPage: React.FC<TodayPageProps> = ({
   };
 
   const todayStr = getTodayStr();
-  const dayPlan = dayPlans[selectedDate] || storage.getDayPlan(selectedDate);
+  const dayPlan = (dayPlans && dayPlans[selectedDate]) || storage.getDayPlan(selectedDate);
+  const plannedTaskIds = Array.isArray(dayPlan?.plannedTaskIds) ? dayPlan.plannedTaskIds : [];
+  const plannedHabitIds = Array.isArray(dayPlan?.plannedHabitIds) ? dayPlan.plannedHabitIds : [];
 
   // Compute tasks for selected date (active only; completed tasks move to archive)
-  const rawPlannedTasks = tasks.filter(
+  const rawPlannedTasks = (tasks || []).filter(
     (t) =>
       !t.completed && (
-        dayPlan.plannedTaskIds.includes(t.id) ||
+        plannedTaskIds.includes(t.id) ||
         t.scheduledDate === selectedDate ||
         t.dueDate === selectedDate
       )
@@ -69,10 +71,10 @@ export const TodayPage: React.FC<TodayPageProps> = ({
   const plannedTasks = sortTasks(rawPlannedTasks);
 
   // Compute habits for selected date (only habits dragged into this day)
-  const plannedHabits = habits.filter((h) => dayPlan.plannedHabitIds.includes(h.id));
+  const plannedHabits = (habits || []).filter((h) => plannedHabitIds.includes(h.id));
 
   // Compute events for selected date (sitting below tasks, not assignable to plan mode)
-  const selectedDateEvents = events.filter((e) => e.date === selectedDate);
+  const selectedDateEvents = (events || []).filter((e) => e.date === selectedDate);
 
   // Available tasks not yet planned on selected date (sorted active first)
   const availableTasks = sortTasks(
@@ -173,7 +175,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
   };
 
   const completedPlannedTasks = plannedTasks.filter((t) => t.completed).length;
-  const habitsDoneOnDate = plannedHabits.filter((h) => h.completedDates.includes(selectedDate)).length;
+  const habitsDoneOnDate = plannedHabits.filter((h) => Array.isArray(h.completedDates) && h.completedDates.includes(selectedDate)).length;
 
   return (
     <div className="space-y-6 sm:space-y-10 animate-fadeIn">
@@ -365,7 +367,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {plannedHabits.map((habit) => {
-                  const isDone = habit.completedDates.includes(selectedDate);
+                  const isDone = Array.isArray(habit.completedDates) && habit.completedDates.includes(selectedDate);
                   return (
                     <div
                       key={habit.id}

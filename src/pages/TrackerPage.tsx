@@ -47,7 +47,9 @@ export const TrackerPage: React.FC<TrackerPageProps> = ({ habits }) => {
   };
 
   const totalStreaks = habits.reduce((acc, h) => acc + h.streak, 0);
-  const habitsDoneToday = habits.filter((h) => h.completedDates.includes(todayStr)).length;
+  const habitsDoneToday = habits.filter(
+    (h) => Array.isArray(h.completedDates) && h.completedDates.includes(todayStr)
+  ).length;
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -208,7 +210,7 @@ export const TrackerPage: React.FC<TrackerPageProps> = ({ habits }) => {
                 {/* Middle: 7-Day interactive check circles */}
                 <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-end max-w-xs">
                   {days.map((d) => {
-                    const isCompleted = habit.completedDates.includes(d.dateStr);
+                    const isCompleted = Array.isArray(habit.completedDates) && habit.completedDates.includes(d.dateStr);
                     return (
                       <button
                         key={d.dateStr}
