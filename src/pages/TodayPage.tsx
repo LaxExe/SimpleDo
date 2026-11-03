@@ -174,8 +174,6 @@ export const TodayPage: React.FC<TodayPageProps> = ({
     storage.removeHabitFromDate(selectedDate, habitId);
   };
 
-  const completedPlannedTasks = plannedTasks.filter((t) => t.completed).length;
-  const habitsDoneOnDate = plannedHabits.filter((h) => Array.isArray(h.completedDates) && h.completedDates.includes(selectedDate)).length;
 
   return (
     <div className="space-y-6 sm:space-y-10 animate-fadeIn">
@@ -197,9 +195,6 @@ export const TodayPage: React.FC<TodayPageProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-neutral-400">
                 {plannedTasks.length} {plannedTasks.length === 1 ? 'task' : 'tasks'}
-              </span>
-              <span className="hidden sm:inline-flex text-xs font-mono text-neutral-600 bg-white px-2.5 py-1 rounded-full border border-[#ebebeb] shadow-2xs">
-                {completedPlannedTasks}/{plannedTasks.length} tasks • {habitsDoneOnDate}/{plannedHabits.length} habits
               </span>
             </div>
           </div>

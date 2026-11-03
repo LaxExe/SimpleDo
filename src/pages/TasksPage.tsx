@@ -9,7 +9,6 @@ import {
   CheckCircle2, 
   Circle, 
   Calendar, 
-  Tag, 
   Sun, 
   Edit2,
   Check,
@@ -111,6 +110,152 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
 
   const completedCount = tasks.filter((t) => t.completed).length;
   const pendingCount = tasks.length - completedCount;
+
+  // Group tasks by inbox when sortBy === 'inbox'
+  const inboxGroupsWithTasks = inboxes
+    .map((inbox) => ({
+      inbox,
+      tasks: filteredTasks.filter((t) => (t.inboxId || 'inbox-general') === inbox.id),
+    }))
+    .filter((g) => g.tasks.length > 0);
+
+  const unassignedTasks = filteredTasks.filter(
+    (t) => !inboxes.some((i) => i.id === (t.inboxId || 'inbox-general'))
+  );
+  if (unassignedTasks.length > 0) {
+    inboxGroupsWithTasks.push({
+      inbox: {
+        id: 'inbox-other',
+        name: 'Other',
+        color: '#737373',
+        createdAt: new Date().toISOString(),
+      },
+      tasks: unassignedTasks,
+    });
+  }
+
+  const renderTaskItem = (task: Task, showInboxBadge: boolean = true) => {
+    const inboxInfo = inboxes.find((i) => i.id === task.inboxId);
+    const plannedToday = isPlannedForToday(task);
+    const inboxColor = inboxInfo?.color || '#171717';
+
+    return (
+      <li
+        key={task.id}
+        className="p-3 sm:px-4 flex items-center justify-between gap-3 hover:bg-[#fafafa]/80 transition-colors group"
+        style={{
+          borderLeft: `3.5px solid ${inboxColor}`,
+        }}
+      >
+        {/* Left: Checkbox + Title */}
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <button
+            onClick={() => storage.toggleTask(task.id)}
+            className="flex-shrink-0 transition-transform active:scale-95"
+          >
+            {task.completed ? (
+              <CheckCircle2 className="w-4 h-4 text-neutral-900 fill-neutral-200" />
+            ) : (
+              <Circle className="w-4 h-4 text-neutral-300 group-hover:text-neutral-500" />
+            )}
+          </button>
+
+          <div className="min-w-0">
+            <p
+              onClick={() => storage.cycleTaskProgress(task.id)}
+              className={`text-xs font-medium truncate cursor-pointer hover:opacity-80 transition-opacity ${
+                task.completed
+                  ? 'line-through text-neutral-400'
+                  : 'text-neutral-900'
+              }`}
+            >
+              {task.title}
+            </p>
+            <div className="mt-1">
+              <TaskProgressBar
+                taskId={task.id}
+                hasProgress={task.hasProgress}
+                completedParts={task.completedParts}
+                totalParts={task.totalParts || 4}
+                completed={task.completed}
+                size="sm"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Badges & Actions */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Priority Tag */}
+          {task.priority === 'high' && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-600 font-medium border border-red-200/50">
+              High
+            </span>
+          )}
+          {task.priority === 'medium' && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium border border-amber-200/50">
+              Med
+            </span>
+          )}
+
+          {/* Inbox Tag (shown in flat view with matching color dot, visible on mobile) */}
+          {showInboxBadge && inboxInfo && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-neutral-700 bg-white border border-[#ebebeb] px-2 py-0.5 rounded shadow-2xs">
+              <span
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: inboxColor }}
+              />
+              <span className="truncate max-w-[85px] sm:max-w-none">{inboxInfo.name}</span>
+            </span>
+          )}
+
+          {/* Due Date */}
+          {task.dueDate && (
+            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-neutral-500 font-mono">
+              <Calendar className="w-3 h-3" />
+              {task.dueDate}
+            </span>
+          )}
+
+          {/* Today Button */}
+          <button
+            onClick={() => handleToggleToday(task.id, plannedToday)}
+            className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded transition-all ${
+              plannedToday
+                ? 'bg-green-50 text-green-700 border border-green-200/80 shadow-2xs'
+                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 border border-transparent'
+            }`}
+            title={plannedToday ? 'Planned for Today (click to remove)' : 'Add to Today'}
+          >
+            {plannedToday ? (
+              <Check className="w-3.5 h-3.5 text-green-600 stroke-[2.5]" />
+            ) : (
+              <Sun className="w-3.5 h-3.5 text-neutral-400" />
+            )}
+            <span>Today</span>
+          </button>
+
+          {/* Edit Task Button */}
+          <button
+            onClick={() => setEditingTask(task)}
+            className="p-1 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+            title="Edit task details"
+          >
+            <Edit2 className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Delete button */}
+          <button
+            onClick={() => storage.deleteTask(task.id)}
+            className="p-1 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100"
+            title="Delete task"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </li>
+    );
+  };
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -251,131 +396,53 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
       </div>
 
       {/* Tasks List */}
-      <div className="bg-white rounded-lg border border-[#ebebeb] shadow-subtle overflow-hidden">
-        {filteredTasks.length === 0 ? (
-          <div className="py-12 text-center text-xs text-neutral-400">
-            No tasks found
-          </div>
-        ) : (
+      {filteredTasks.length === 0 ? (
+        <div className="bg-white rounded-lg border border-[#ebebeb] shadow-subtle py-12 text-center text-xs text-neutral-400">
+          No tasks found
+        </div>
+      ) : sortBy === 'inbox' ? (
+        <div className="space-y-4">
+          {inboxGroupsWithTasks.map(({ inbox, tasks: groupTasks }) => (
+            <div
+              key={inbox.id}
+              className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle overflow-hidden"
+            >
+              {/* Colored Region Header */}
+              <div
+                className="px-4 py-3 sm:px-5 flex items-center justify-between border-b border-[#ebebeb]"
+                style={{
+                  backgroundColor: `${inbox.color || '#171717'}12`,
+                  borderLeft: `4px solid ${inbox.color || '#171717'}`,
+                }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-2xs"
+                    style={{ backgroundColor: inbox.color || '#171717' }}
+                  />
+                  <h2 className="text-xs sm:text-sm font-semibold text-neutral-900 tracking-tight">
+                    {inbox.name}
+                  </h2>
+                </div>
+                <span className="text-[11px] font-mono font-medium px-2.5 py-0.5 rounded-full bg-white border border-[#ebebeb] text-neutral-700 shadow-2xs">
+                  {groupTasks.length} {groupTasks.length === 1 ? 'task' : 'tasks'}
+                </span>
+              </div>
+
+              {/* Task list for this inbox */}
+              <ul className="divide-y divide-[#ebebeb]/70">
+                {groupTasks.map((task) => renderTaskItem(task, false))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg border border-[#ebebeb] shadow-subtle overflow-hidden">
           <ul className="divide-y divide-[#ebebeb]/70">
-            {filteredTasks.map((task) => {
-              const inboxInfo = inboxes.find((i) => i.id === task.inboxId);
-              const plannedToday = isPlannedForToday(task);
-
-              return (
-                <li
-                  key={task.id}
-                  className="p-3.5 sm:px-5 flex items-center justify-between gap-3 hover:bg-[#fafafa]/80 transition-colors group"
-                >
-                  {/* Left: Checkbox + Title */}
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <button
-                      onClick={() => storage.toggleTask(task.id)}
-                      className="flex-shrink-0 transition-transform active:scale-95"
-                    >
-                      {task.completed ? (
-                        <CheckCircle2 className="w-4 h-4 text-neutral-900 fill-neutral-200" />
-                      ) : (
-                        <Circle className="w-4 h-4 text-neutral-300 group-hover:text-neutral-500" />
-                      )}
-                    </button>
-
-                    <div className="min-w-0">
-                      <p
-                        onClick={() => storage.cycleTaskProgress(task.id)}
-                        className={`text-xs font-medium truncate cursor-pointer hover:opacity-80 transition-opacity ${
-                          task.completed
-                            ? 'line-through text-neutral-400'
-                            : 'text-neutral-900'
-                        }`}
-                      >
-                        {task.title}
-                      </p>
-                      <div className="mt-1">
-                        <TaskProgressBar
-                          taskId={task.id}
-                          hasProgress={task.hasProgress}
-                          completedParts={task.completedParts}
-                          totalParts={task.totalParts || 4}
-                          completed={task.completed}
-                          size="sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Badges & Actions */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {/* Priority Tag */}
-                    {task.priority === 'high' && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-600 font-medium border border-red-200/50">
-                        High
-                      </span>
-                    )}
-                    {task.priority === 'medium' && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium border border-amber-200/50">
-                        Med
-                      </span>
-                    )}
-
-                    {/* Inbox / Category Tag */}
-                    {inboxInfo && (
-                      <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-[#fafafa] border border-[#ebebeb] px-2 py-0.5 rounded">
-                        <Tag className="w-2.5 h-2.5" />
-                        {inboxInfo.name}
-                      </span>
-                    )}
-
-                    {/* Due Date */}
-                    {task.dueDate && (
-                      <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-neutral-500 font-mono">
-                        <Calendar className="w-3 h-3" />
-                        {task.dueDate}
-                      </span>
-                    )}
-
-                    {/* Today Button: Green Checkmark when added to today, Gray Sun when not */}
-                    <button
-                      onClick={() => handleToggleToday(task.id, plannedToday)}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded transition-all ${
-                        plannedToday
-                          ? 'bg-green-50 text-green-700 border border-green-200/80 shadow-2xs'
-                          : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 border border-transparent'
-                      }`}
-                      title={plannedToday ? 'Planned for Today (click to remove)' : 'Add to Today'}
-                    >
-                      {plannedToday ? (
-                        <Check className="w-3.5 h-3.5 text-green-600 stroke-[2.5]" />
-                      ) : (
-                        <Sun className="w-3.5 h-3.5 text-neutral-400" />
-                      )}
-                      <span>Today</span>
-                    </button>
-
-                    {/* Edit Task Button */}
-                    <button
-                      onClick={() => setEditingTask(task)}
-                      className="p-1 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
-                      title="Edit task details"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-
-                    {/* Delete button */}
-                    <button
-                      onClick={() => storage.deleteTask(task.id)}
-                      className="p-1 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100"
-                      title="Delete task"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
+            {filteredTasks.map((task) => renderTaskItem(task, true))}
           </ul>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Task Edit Modal */}
       <TaskEditModal
