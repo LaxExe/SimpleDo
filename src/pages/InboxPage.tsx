@@ -32,6 +32,7 @@ interface InboxPageProps {
 
 export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxes, initialView = 'inbox' }) => {
   const [viewMode, setViewMode] = useState<'inbox' | 'list'>(initialView);
+  const [isAddingTaskInList, setIsAddingTaskInList] = useState(false);
   const [selectedInboxId, setSelectedInboxId] = useState<string>('all');
   
   // Create mode: task vs event
@@ -231,7 +232,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#ebebeb]">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
-            {viewMode === 'inbox' ? 'Inbox Hub' : 'All Tasks'}
+            {viewMode === 'inbox' ? 'Inbox Hub' : 'Tasks'}
           </h1>
 
           {/* Sub-view switcher: Inboxes (Default) vs All Tasks list */}
@@ -259,7 +260,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
           </div>
         </div>
 
-        {viewMode === 'inbox' && (
+        {viewMode === 'inbox' ? (
           <button
             onClick={() => setIsCreatingInbox(!isCreatingInbox)}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-neutral-700 bg-white hover:bg-neutral-100 border border-[#ebebeb] rounded-full transition-colors shadow-subtle self-start sm:self-auto"
@@ -267,11 +268,27 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
             <FolderPlus className="w-3.5 h-3.5" />
             <span>{isCreatingInbox ? 'Cancel' : 'New Inbox'}</span>
           </button>
+        ) : (
+          <button
+            onClick={() => setIsAddingTaskInList(!isAddingTaskInList)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-full transition-colors shadow-subtle self-start sm:self-auto"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>{isAddingTaskInList ? 'Close Form' : 'Add Task'}</span>
+          </button>
         )}
       </div>
 
       {viewMode === 'list' ? (
-        <TasksPage tasks={tasks} inboxes={inboxes} />
+        <TasksPage
+          tasks={tasks}
+          inboxes={inboxes}
+          hideHeader={true}
+          isAdding={isAddingTaskInList}
+          onToggleAdd={(val) =>
+            setIsAddingTaskInList(val !== undefined ? val : !isAddingTaskInList)
+          }
+        />
       ) : (
         <>
           {/* New Inbox Creation Form */}
@@ -436,12 +453,6 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
         {/* Left Column: Inbox List (4 cols) */}
         <div className="md:col-span-4 space-y-2">
-          <div className="px-1 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-neutral-400">
-              Your Inboxes
-            </span>
-          </div>
-
           <button
             onClick={() => setSelectedInboxId('all')}
             className={`w-full flex items-center justify-between p-3 rounded-lg border text-left text-xs transition-all ${

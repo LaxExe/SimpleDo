@@ -18,9 +18,18 @@ import {
 interface TasksPageProps {
   tasks: Task[];
   inboxes: InboxGroup[];
+  hideHeader?: boolean;
+  isAdding?: boolean;
+  onToggleAdd?: (val?: boolean) => void;
 }
 
-export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
+export const TasksPage: React.FC<TasksPageProps> = ({
+  tasks,
+  inboxes,
+  hideHeader = false,
+  isAdding: externalIsAdding,
+  onToggleAdd,
+}) => {
   // Show active tasks only by default
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'high'>('active');
   const [sortBy, setSortBy] = useState<'priority' | 'due_date' | 'inbox' | 'newest'>('inbox');
@@ -28,8 +37,18 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
   const [inboxId, setInboxId] = useState(inboxes[0]?.id || 'inbox-general');
   const [priority, setPriority] = useState<Priority>('medium');
   const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
-  const [isAdding, setIsAdding] = useState(false);
+  const [internalIsAdding, setInternalIsAdding] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  const isAdding = externalIsAdding !== undefined ? externalIsAdding : internalIsAdding;
+
+  const setIsAdding = (val: boolean) => {
+    if (onToggleAdd) {
+      onToggleAdd(val);
+    } else {
+      setInternalIsAdding(val);
+    }
+  };
 
   const todayStr = getTodayStr();
   const todayPlan = storage.getDayPlan(todayStr);
@@ -111,8 +130,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
-  const completedCount = tasks.filter((t) => t.completed).length;
-  const pendingCount = tasks.length - completedCount;
+  const pendingCount = tasks.filter((t) => !t.completed).length;
 
   // Group tasks by inbox when sortBy === 'inbox'
   const inboxGroupsWithTasks = inboxes
@@ -262,23 +280,25 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#ebebeb]">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
-            Tasks
-          </h1>
+      {/* Header (rendered when not embedded in a parent page with its own header) */}
+      {!hideHeader && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#ebebeb]">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+              Tasks
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsAdding(!isAdding)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-full transition-colors shadow-subtle"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{isAdding ? 'Close Form' : 'Add Task'}</span>
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsAdding(!isAdding)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-full transition-colors shadow-subtle"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>{isAdding ? 'Close Form' : 'Add Task'}</span>
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Inline Add Task Form */}
       {isAdding && (
@@ -391,10 +411,8 @@ export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 text-xs text-neutral-500 font-mono">
-          <span>{pendingCount} active</span>
-          <span>•</span>
-          <span>{completedCount} completed</span>
+        <div className="text-xs text-neutral-500 font-mono">
+          <span>{pendingCount} {pendingCount === 1 ? 'active task' : 'active tasks'}</span>
         </div>
       </div>
 
