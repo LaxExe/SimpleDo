@@ -3,7 +3,6 @@ import { Page } from './types';
 import { useSimpleDoData } from './hooks/useSimpleDoData';
 import { Navigation } from './components/Navigation';
 import { TodayPage } from './pages/TodayPage';
-import { TasksPage } from './pages/TasksPage';
 import { InboxPage } from './pages/InboxPage';
 import { TrackerPage } from './pages/TrackerPage';
 import { AgentsPage } from './pages/AgentsPage';
@@ -127,11 +126,7 @@ export function App() {
           />
         )}
 
-        {currentPage === 'tasks' && (
-          <TasksPage tasks={data.tasks} inboxes={data.inboxes} />
-        )}
-
-        {currentPage === 'inbox' && (
+        {(currentPage === 'tasks' || currentPage === 'inbox') && (
           <InboxPage
             tasks={data.tasks}
             events={data.events || []}

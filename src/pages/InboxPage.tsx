@@ -4,6 +4,7 @@ import { storage, getTodayStr, PRESET_INBOX_COLORS, sortTasks } from '../service
 import { TaskProgressBar } from '../components/TaskProgressBar';
 import { TaskEditModal } from '../components/TaskEditModal';
 import { EventEditModal } from '../components/EventEditModal';
+import { TasksPage } from './TasksPage';
 import { 
   Plus, 
   Trash2, 
@@ -26,9 +27,11 @@ interface InboxPageProps {
   tasks: Task[];
   events?: InboxEvent[];
   inboxes: InboxGroup[];
+  initialView?: 'inbox' | 'list';
 }
 
-export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxes }) => {
+export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxes, initialView = 'inbox' }) => {
+  const [viewMode, setViewMode] = useState<'inbox' | 'list'>(initialView);
   const [selectedInboxId, setSelectedInboxId] = useState<string>('all');
   
   // Create mode: task vs event
@@ -226,21 +229,52 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#ebebeb]">
-        <div>
+        <div className="flex items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
-            Inbox Hub
+            {viewMode === 'inbox' ? 'Inbox Hub' : 'All Tasks'}
           </h1>
+
+          {/* Sub-view switcher: Inboxes (Default) vs All Tasks list */}
+          <div className="flex items-center p-0.5 bg-[#ebebeb]/60 rounded-full border border-[#ebebeb] text-xs">
+            <button
+              onClick={() => setViewMode('inbox')}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                viewMode === 'inbox'
+                  ? 'bg-white text-neutral-900 shadow-sm'
+                  : 'text-neutral-500 hover:text-neutral-900'
+              }`}
+            >
+              Inboxes
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                viewMode === 'list'
+                  ? 'bg-white text-neutral-900 shadow-sm'
+                  : 'text-neutral-500 hover:text-neutral-900'
+              }`}
+            >
+              All Tasks
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setIsCreatingInbox(!isCreatingInbox)}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-neutral-700 bg-white hover:bg-neutral-100 border border-[#ebebeb] rounded-full transition-colors shadow-subtle self-start sm:self-auto"
-        >
-          <FolderPlus className="w-3.5 h-3.5" />
-          <span>{isCreatingInbox ? 'Cancel' : 'New Inbox'}</span>
-        </button>
+
+        {viewMode === 'inbox' && (
+          <button
+            onClick={() => setIsCreatingInbox(!isCreatingInbox)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-neutral-700 bg-white hover:bg-neutral-100 border border-[#ebebeb] rounded-full transition-colors shadow-subtle self-start sm:self-auto"
+          >
+            <FolderPlus className="w-3.5 h-3.5" />
+            <span>{isCreatingInbox ? 'Cancel' : 'New Inbox'}</span>
+          </button>
+        )}
       </div>
 
-      {/* New Inbox Creation Form */}
+      {viewMode === 'list' ? (
+        <TasksPage tasks={tasks} inboxes={inboxes} />
+      ) : (
+        <>
+          {/* New Inbox Creation Form */}
       {isCreatingInbox && (
         <form
           onSubmit={handleCreateInbox}
@@ -1046,6 +1080,8 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {/* Task Edit Modal */}
       <TaskEditModal

@@ -23,7 +23,7 @@ interface TasksPageProps {
 export const TasksPage: React.FC<TasksPageProps> = ({ tasks, inboxes }) => {
   // Show active tasks only by default
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'high'>('active');
-  const [sortBy, setSortBy] = useState<'priority' | 'due_date' | 'inbox' | 'newest'>('priority');
+  const [sortBy, setSortBy] = useState<'priority' | 'due_date' | 'inbox' | 'newest'>('inbox');
   const [title, setTitle] = useState('');
   const [inboxId, setInboxId] = useState(inboxes[0]?.id || 'inbox-general');
   const [priority, setPriority] = useState<Priority>('medium');
