@@ -181,3 +181,12 @@ If your agent interacts via a web browser (Puppeteer, Playwright, Chrome DevTool
   // Save full state (triggers instant Firebase upload to phone automatically)
   window.storage.save(updatedData);
   ```
+
+---
+
+## 🎨 Method 3: General UI & Frontend Design Standard
+
+For agents tasked with redesigning, expanding, or implementing frontend components, see **[DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md)**.
+
+`DESIGN_SYSTEM.md` contains the portable, application-agnostic Minimalist Engineering Design System (Geist typography, `#fafafa` canvas, `#ffffff` cards, `#ebebeb` borders, 10-color semantic scale, zero-clipping border architectures, and mobile/desktop navigation docks) ready to be dropped into any repo or agent instruction set.
+
