@@ -97,9 +97,9 @@ SimpleDo uses clean system font stacks with strict differentiation between prose
 
 ### 4.2 Native Mobile Bottom Bar
 * **Classes**: `fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#ebebeb] px-3 py-1.5 pb-safe shadow-modal`
-* **Layout**: 4-column balanced grid with icons and compact labels:
+* **Layout**: 3-column balanced grid with icons and compact labels:
   * **Today** (`Sun` icon)
-  * **Tasks / Inbox** (`CheckSquare` / `Inbox` icon — defaults to the Inbox Hub)
+  * **Tasks** (`CheckSquare` icon — unified tasks and coursework inboxes)
   * **Tracker** (`Activity` icon)
 * **Active State**: Inset pill highlight `bg-neutral-100/70 text-neutral-900 font-semibold`, icon stroke switches from `stroke-[1.75]` to `stroke-[2.5]`.
 * **Badge Counter**: Overlaid solid black pill `bg-neutral-900 text-white text-[9px] font-mono font-bold rounded-full`.

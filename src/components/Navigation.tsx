@@ -1,13 +1,13 @@
 import React from 'react';
 import { Page } from '../types';
-import { CheckSquare, Inbox, Activity, Sun } from 'lucide-react';
+import { CheckSquare, Activity, Sun } from 'lucide-react';
 
 interface NavigationProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
   todayTasksCount: number;
   pendingTasksCount: number;
-  inboxTasksCount: number;
+  inboxTasksCount?: number;
   habitsTodayDone: { done: number; total: number };
 }
 
@@ -16,7 +16,6 @@ export const Navigation: React.FC<NavigationProps> = ({
   onNavigate,
   todayTasksCount,
   pendingTasksCount,
-  inboxTasksCount,
   habitsTodayDone,
 }) => {
   const tabs = [
@@ -31,12 +30,6 @@ export const Navigation: React.FC<NavigationProps> = ({
       label: 'Tasks',
       icon: CheckSquare,
       badge: pendingTasksCount > 0 ? pendingTasksCount : undefined,
-    },
-    {
-      id: 'inbox' as Page,
-      label: 'Inbox',
-      icon: Inbox,
-      badge: inboxTasksCount > 0 ? inboxTasksCount : undefined,
     },
     {
       id: 'tracker' as Page,
@@ -68,7 +61,10 @@ export const Navigation: React.FC<NavigationProps> = ({
           <nav className="hidden sm:flex items-center p-1 bg-[#ebebeb]/60 rounded-full border border-[#ebebeb]">
             {tabs.map((tab) => {
               const Icon = tab.icon;
-              const isActive = currentPage === tab.id;
+              const isActive =
+                tab.id === 'tasks'
+                  ? currentPage === 'tasks' || currentPage === 'inbox'
+                  : currentPage === tab.id;
               return (
                 <button
                   key={tab.id}
@@ -110,10 +106,13 @@ export const Navigation: React.FC<NavigationProps> = ({
 
       {/* Mobile Bottom Navigation Bar (iOS / Native App Feel) */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#ebebeb] px-3 py-1.5 pb-safe shadow-modal">
-        <div className="grid grid-cols-4 gap-1">
+        <div className="grid grid-cols-3 gap-2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
-            const isActive = currentPage === tab.id;
+            const isActive =
+              tab.id === 'tasks'
+                ? currentPage === 'tasks' || currentPage === 'inbox'
+                : currentPage === tab.id;
             return (
               <button
                 key={tab.id}

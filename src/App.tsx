@@ -167,18 +167,10 @@ export function App() {
             <button
               onClick={() => setCurrentPage('tasks')}
               className={`hover:text-neutral-900 transition-colors ${
-                currentPage === 'tasks' ? 'text-neutral-900 font-medium' : ''
+                currentPage === 'tasks' || currentPage === 'inbox' ? 'text-neutral-900 font-medium' : ''
               }`}
             >
               Tasks
-            </button>
-            <button
-              onClick={() => setCurrentPage('inbox')}
-              className={`hover:text-neutral-900 transition-colors ${
-                currentPage === 'inbox' ? 'text-neutral-900 font-medium' : ''
-              }`}
-            >
-              Inbox
             </button>
             <button
               onClick={() => setCurrentPage('tracker')}
