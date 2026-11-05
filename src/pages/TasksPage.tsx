@@ -155,7 +155,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
     });
   }
 
-  const renderTaskItem = (task: Task, showInboxBadge: boolean = true) => {
+  const renderTaskItem = (task: Task, showInboxBadge: boolean = true, showLeftBar: boolean = true) => {
     const inboxInfo = inboxes.find((i) => i.id === task.inboxId);
     const plannedToday = isPlannedForToday(task);
     const inboxColor = inboxInfo?.color || '#171717';
@@ -163,11 +163,16 @@ export const TasksPage: React.FC<TasksPageProps> = ({
     return (
       <li
         key={task.id}
-        className="p-3 sm:px-4 flex items-center justify-between gap-3 hover:bg-[#fafafa]/80 transition-colors group"
-        style={{
-          borderLeft: `3.5px solid ${inboxColor}`,
-        }}
+        className="p-3 sm:px-4 flex items-center justify-between gap-3 hover:bg-[#fafafa]/80 transition-colors group relative"
       >
+        {/* Left Color Accent Bar for flat view (inset & rounded, zero border clipping) */}
+        {showLeftBar && (
+          <span
+            className="w-1 self-stretch rounded-full flex-shrink-0 my-0.5"
+            style={{ backgroundColor: inboxColor }}
+          />
+        )}
+
         {/* Left: Checkbox + Title */}
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <button
@@ -241,7 +246,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
           {/* Today Button */}
           <button
             onClick={() => handleToggleToday(task.id, plannedToday)}
-            className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded transition-all ${
+            className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded transition-all active:scale-95 ${
               plannedToday
                 ? 'bg-green-50 text-green-700 border border-green-200/80 shadow-2xs'
                 : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 border border-transparent'
@@ -304,24 +309,32 @@ export const TasksPage: React.FC<TasksPageProps> = ({
       {isAdding && (
         <form
           onSubmit={handleAddTask}
-          className="bg-white p-4 rounded-lg border border-[#ebebeb] shadow-subtle space-y-3"
+          className="bg-white p-5 rounded-lg border border-[#ebebeb] shadow-subtle space-y-4 animate-scaleIn"
         >
           <div className="text-xs font-semibold text-neutral-900">Create New Task</div>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="What needs to be done?"
-            autoFocus
-            className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900 transition-colors shadow-2xs"
-          />
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-neutral-500">Inbox:</span>
+          <div>
+            <label className="block text-xs font-medium text-neutral-700 mb-1">
+              Task Title
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="What needs to be done?"
+              autoFocus
+              className="w-full px-3 py-2 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900 transition-colors shadow-2xs"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">
+                Inbox
+              </label>
               <select
                 value={inboxId}
                 onChange={(e) => setInboxId(e.target.value)}
-                className="text-xs bg-[#fafafa] border border-[#ebebeb] rounded px-2 py-1 focus:outline-none"
+                className="w-full px-3 py-2 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900 cursor-pointer"
               >
                 {inboxes.map((i) => (
                   <option key={i.id} value={i.id}>
@@ -331,12 +344,14 @@ export const TasksPage: React.FC<TasksPageProps> = ({
               </select>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-neutral-500">Priority:</span>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">
+                Priority
+              </label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as Priority)}
-                className="text-xs bg-[#fafafa] border border-[#ebebeb] rounded px-2 py-1 focus:outline-none"
+                className="w-full px-3 py-2 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900 cursor-pointer"
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -344,32 +359,34 @@ export const TasksPage: React.FC<TasksPageProps> = ({
               </select>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-neutral-500">Due:</span>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">
+                Due Date
+              </label>
               <input
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="text-xs bg-[#fafafa] border border-[#ebebeb] rounded px-2 py-1 focus:outline-none"
+                className="w-full px-3 py-2 text-xs bg-[#fafafa] border border-[#ebebeb] rounded-md focus:outline-none focus:border-neutral-900 font-mono"
               />
             </div>
+          </div>
 
-            <div className="ml-auto flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsAdding(false)}
-                className="px-3 py-1 text-xs text-neutral-600 hover:text-neutral-900"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={!title.trim()}
-                className="px-3.5 py-1 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-md transition-colors disabled:opacity-50"
-              >
-                Save Task
-              </button>
-            </div>
+          <div className="flex justify-end gap-2 pt-2 border-t border-[#ebebeb]">
+            <button
+              type="button"
+              onClick={() => setIsAdding(false)}
+              className="px-3.5 py-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-900 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!title.trim()}
+              className="px-4 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-md transition-colors disabled:opacity-40 shadow-subtle"
+            >
+              Save Task
+            </button>
           </div>
         </form>
       )}
@@ -427,13 +444,17 @@ export const TasksPage: React.FC<TasksPageProps> = ({
             <div
               key={inbox.id}
               className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle overflow-hidden"
+              style={{
+                borderLeftWidth: '4px',
+                borderLeftColor: inbox.color || '#171717',
+                borderLeftStyle: 'solid',
+              }}
             >
               {/* Colored Region Header */}
               <div
                 className="px-4 py-3 sm:px-5 flex items-center justify-between border-b border-[#ebebeb]"
                 style={{
                   backgroundColor: `${inbox.color || '#171717'}12`,
-                  borderLeft: `4px solid ${inbox.color || '#171717'}`,
                 }}
               >
                 <div className="flex items-center gap-2.5">
@@ -452,7 +473,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
 
               {/* Task list for this inbox */}
               <ul className="divide-y divide-[#ebebeb]/70">
-                {groupTasks.map((task) => renderTaskItem(task, false))}
+                {groupTasks.map((task) => renderTaskItem(task, false, false))}
               </ul>
             </div>
           ))}

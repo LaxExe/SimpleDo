@@ -27,7 +27,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     },
     {
       id: 'tasks' as Page,
-      label: 'Tasks',
+      label: 'To Do',
       icon: CheckSquare,
       badge: pendingTasksCount > 0 ? pendingTasksCount : undefined,
     },
@@ -69,20 +69,20 @@ export const Navigation: React.FC<NavigationProps> = ({
                 <button
                   key={tab.id}
                   onClick={() => onNavigate(tab.id)}
-                  className={`relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-full transition-all duration-150 select-none ${
+                  className={`relative flex items-center gap-2 px-3.5 py-1.5 text-xs rounded-full transition-all duration-150 select-none active:scale-95 ${
                     isActive
-                      ? 'bg-white text-neutral-900 shadow-sm'
-                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/50'
+                      ? 'bg-white text-neutral-900 shadow-sm font-semibold'
+                      : 'text-neutral-500 hover:text-neutral-900 hover:bg-white/50 font-normal'
                   }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-neutral-900' : 'text-neutral-500'}`} />
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-neutral-900 stroke-[2.5]' : 'text-neutral-500 stroke-[1.75]'}`} />
                   <span>{tab.label}</span>
                   {tab.badge !== undefined && (
                     <span
-                      className={`ml-0.5 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-medium ${
+                      className={`ml-0.5 text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
                         isActive
-                          ? 'bg-neutral-200 text-neutral-900'
-                          : 'bg-neutral-200/70 text-neutral-600'
+                          ? 'bg-neutral-200 text-neutral-900 font-bold'
+                          : 'bg-neutral-200/70 text-neutral-600 font-medium'
                       }`}
                     >
                       {tab.badge}
@@ -117,10 +117,10 @@ export const Navigation: React.FC<NavigationProps> = ({
               <button
                 key={tab.id}
                 onClick={() => onNavigate(tab.id)}
-                className={`flex flex-col items-center justify-center py-1.5 px-2 rounded-xl transition-all relative ${
+                className={`flex flex-col items-center justify-center py-1.5 px-2 rounded-xl transition-all relative active:scale-95 ${
                   isActive
                     ? 'text-neutral-900 font-semibold bg-neutral-100/70'
-                    : 'text-neutral-500 hover:text-neutral-900'
+                    : 'text-neutral-500 hover:text-neutral-900 font-normal'
                 }`}
               >
                 <div className="relative">
@@ -131,7 +131,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] tracking-tight mt-1">
+                <span className={`text-[10px] tracking-tight mt-1 transition-all ${isActive ? 'font-semibold text-neutral-900' : 'font-normal text-neutral-500'}`}>
                   {tab.label}
                 </span>
               </button>

@@ -170,7 +170,7 @@ export function App() {
                 currentPage === 'tasks' || currentPage === 'inbox' ? 'text-neutral-900 font-medium' : ''
               }`}
             >
-              Tasks
+              To Do
             </button>
             <button
               onClick={() => setCurrentPage('tracker')}

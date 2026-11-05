@@ -232,30 +232,30 @@ export const InboxPage: React.FC<InboxPageProps> = ({ tasks, events = [], inboxe
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#ebebeb]">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
-            {viewMode === 'inbox' ? 'Inbox Hub' : 'Tasks'}
+            {viewMode === 'inbox' ? 'Inbox Hub' : 'To Do'}
           </h1>
 
-          {/* Sub-view switcher: Inboxes (Default) vs All Tasks list */}
+          {/* Sub-view switcher: Inboxes (Default) vs To Do list */}
           <div className="flex items-center p-0.5 bg-[#ebebeb]/60 rounded-full border border-[#ebebeb] text-xs">
             <button
               onClick={() => setViewMode('inbox')}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+              className={`px-3 py-1 rounded-full text-xs transition-all active:scale-95 ${
                 viewMode === 'inbox'
-                  ? 'bg-white text-neutral-900 shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-900'
+                  ? 'bg-white text-neutral-900 shadow-sm font-semibold'
+                  : 'text-neutral-500 hover:text-neutral-900 font-normal'
               }`}
             >
               Inboxes
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+              className={`px-3 py-1 rounded-full text-xs transition-all active:scale-95 ${
                 viewMode === 'list'
-                  ? 'bg-white text-neutral-900 shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-900'
+                  ? 'bg-white text-neutral-900 shadow-sm font-semibold'
+                  : 'text-neutral-500 hover:text-neutral-900 font-normal'
               }`}
             >
-              All Tasks
+              To Do
             </button>
           </div>
         </div>
