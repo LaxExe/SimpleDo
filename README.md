@@ -2,27 +2,28 @@
 
 SimpleDo is a clean, local-first productivity app that combines tasks, inboxes, events, and habit tracking in one fast interface. It syncs live across your devices through Firebase and installs as a PWA. It also exposes an agent-friendly REST interface, so AI agents can read and write your to-dos directly.
 
-🌐 **Live app:** [laxexe.github.io/SimpleDo](https://laxexe.github.io/SimpleDo/)
+**Live app:** [laxexe.github.io/SimpleDo](https://laxexe.github.io/SimpleDo/) | **Website:** [lakshman-codes.github.io](https://lakshman-codes.github.io) | **Author:** [Lakshman on GitHub](https://github.com/LaxExe)
+
 
 ---
 
 ## Key Features
 
-- ✅ **Today View**: A focused daily plan with your scheduled tasks, events, and habits.
-- 📥 **Inboxes**: Group tasks and events into custom inboxes (like School, Work, or General).
-- 📅 **Calendar & Events**: Month calendar view with event times, locations, and descriptions.
-- 🔁 **Habit Tracker**: Daily check-ins with current and best streak counts.
-- 📊 **Task Progress Bars**: See at a glance how far along each inbox or day is.
-- ⚡ **Realtime Sync**: Firebase Realtime Database pushes changes to your phone, laptop, and tablet in well under a second.
-- 💾 **Local-First**: Data is saved locally first, so the app stays fast and works offline.
-- 📲 **Installable PWA**: Add it to your home screen with standalone display and a manifest.
-- 🔗 **QR / Link Sync**: Move data between devices with a `#sync=` payload link.
-- 🤖 **Agent API**: A dedicated Agents page and [`AGENTS.md`](AGENTS.md) document how Claude, Gemini, ChatGPT, or any script can automate SimpleDo over plain HTTP.
-- 🎨 **Design System**: Documented tokens and principles in [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) and [`SIMPLE_DO_DESIGN_GUIDE.md`](SIMPLE_DO_DESIGN_GUIDE.md).
+- **Today View**: A focused daily plan with your scheduled tasks, events, and habits.
+- **Inboxes**: Group tasks and events into custom inboxes (like School, Work, or General).
+- **Calendar & Events**: Month calendar view with event times, locations, and descriptions.
+- **Habit Tracker**: Daily check-ins with current and best streak counts.
+- **Task Progress Bars**: See at a glance how far along each inbox or day is.
+- **Realtime Sync**: Firebase Realtime Database pushes changes to your phone, laptop, and tablet in well under a second.
+- **Local-First**: Data is saved locally first, so the app stays fast and works offline.
+- **Installable PWA**: Add it to your home screen with standalone display and a manifest.
+- **QR / Link Sync**: Move data between devices with a `#sync=` payload link.
+- **Agent API**: A dedicated Agents page and [`AGENTS.md`](AGENTS.md) document how Claude, Gemini, ChatGPT, or any script can automate SimpleDo over plain HTTP.
+- **Design System**: Documented tokens and principles in [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) and [`SIMPLE_DO_DESIGN_GUIDE.md`](SIMPLE_DO_DESIGN_GUIDE.md).
 
 ---
 
-## 🤖 Agent Access
+## Agent Access
 
 Every part of your data lives at one Firebase Realtime Database path, so agents need no SDK and no browser automation:
 
@@ -35,7 +36,7 @@ Writes show up live on every open device. Full operations, a Python helper, and 
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -47,7 +48,7 @@ Writes show up live on every open device. Full operations, a Python helper, and 
 
 ---
 
-## 🚀 How to Build & Run
+## How to Build & Run
 
 ### Prerequisites
 - **Node.js** 20+
@@ -77,7 +78,7 @@ Every push to `main` triggers [`.github/workflows/deploy.yml`](.github/workflows
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 SimpleDo/
@@ -104,3 +105,9 @@ SimpleDo/
     │   └── firebase.ts       # Realtime Database sync & status
     └── types/index.ts        # Task, Habit, InboxEvent, DayPlan, SimpleDoData
 ```
+
+---
+
+## About the Author
+
+Built by Lakshman, a first-year Computer Engineering student at the University of Waterloo looking to build more experience. See more of my work at [lakshman-codes.github.io](https://lakshman-codes.github.io).
