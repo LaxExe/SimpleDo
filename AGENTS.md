@@ -14,7 +14,8 @@ When you write to this endpoint, the user's phone and laptop screens will update
 
 ### Endpoint Details
 * **Database URL**: `https://simple-do-c5438-default-rtdb.firebaseio.com`
-* **Data Path**: `/simpledo_data.json`
+* **Per-User Account Data Path**: `/users/<username>/data.json` (each signed-up user has their own isolated cloud workspace and profile at `/users/<username>/profile.json`)
+* **Primary / Legacy Root Data Path**: `/simpledo_data.json`
 
 ---
 

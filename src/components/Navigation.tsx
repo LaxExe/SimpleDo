@@ -1,6 +1,6 @@
 import React from 'react';
-import { Page } from '../types';
-import { CheckSquare, Activity, Sun } from 'lucide-react';
+import { Page, UserProfile } from '../types';
+import { CheckSquare, Activity, Sun, LogOut, Globe } from 'lucide-react';
 
 interface NavigationProps {
   currentPage: Page;
@@ -9,6 +9,8 @@ interface NavigationProps {
   pendingTasksCount: number;
   inboxTasksCount?: number;
   habitsTodayDone: { done: number; total: number };
+  currentUser?: UserProfile | null;
+  onSignOut?: () => void;
 }
 
 export const Navigation: React.FC<NavigationProps> = ({
@@ -17,6 +19,8 @@ export const Navigation: React.FC<NavigationProps> = ({
   todayTasksCount,
   pendingTasksCount,
   habitsTodayDone,
+  currentUser,
+  onSignOut,
 }) => {
   const tabs = [
     {
@@ -93,13 +97,34 @@ export const Navigation: React.FC<NavigationProps> = ({
             })}
           </nav>
 
-          {/* Quick Date Display (Desktop only to prevent mobile clutter) */}
-          <div className="hidden sm:flex items-center text-xs text-neutral-500 font-mono">
-            {new Date().toLocaleDateString('en-US', {
-              weekday: 'short',
-              month: 'short',
-              day: 'numeric',
-            })}
+          {/* Account & Overview Controls */}
+          <div className="flex items-center gap-2 text-xs">
+            <button
+              onClick={() => onNavigate('landing')}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-neutral-600 hover:text-neutral-900 bg-white border border-[#ebebeb] shadow-2xs transition-all active:scale-95"
+              title="Platform Overview & Landing Page"
+            >
+              <Globe className="w-3.5 h-3.5 text-neutral-500" />
+              <span className="hidden md:inline">Overview</span>
+            </button>
+
+            {currentUser && (
+              <div className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-0.5 rounded-full bg-white border border-[#ebebeb] shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" title="Synced with Cloud DB" />
+                <span className="text-[11px] font-mono font-medium text-neutral-800 max-w-[90px] truncate">
+                  @{currentUser.username}
+                </span>
+                {onSignOut && (
+                  <button
+                    onClick={onSignOut}
+                    className="p-1 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-full transition-colors"
+                    title="Sign out / Switch account"
+                  >
+                    <LogOut className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </header>

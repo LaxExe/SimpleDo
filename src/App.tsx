@@ -1,17 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Page } from './types';
+import { Page, UserProfile } from './types';
 import { useSimpleDoData } from './hooks/useSimpleDoData';
 import { Navigation } from './components/Navigation';
+import { LandingPage } from './pages/LandingPage';
 import { TodayPage } from './pages/TodayPage';
 import { InboxPage } from './pages/InboxPage';
 import { TrackerPage } from './pages/TrackerPage';
 import { AgentsPage } from './pages/AgentsPage';
 import { storage, getTodayStr } from './services/storage';
-import { subscribeToFirebaseStatus, SyncStatus } from './services/firebase';
+import { auth } from './services/auth';
+import { subscribeToFirebaseStatus, SyncStatus, setActiveDatabasePath } from './services/firebase';
 import { CheckCircle2, AlertTriangle, ExternalLink } from 'lucide-react';
 
 export function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('today');
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => auth.getCurrentUser());
+  const [currentPage, setCurrentPage] = useState<Page>(() =>
+    auth.getCurrentUser() ? 'today' : 'landing'
+  );
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
   const [firebaseStatus, setFirebaseStatus] = useState<SyncStatus>('connecting');
   const data = useSimpleDoData();
@@ -22,7 +27,21 @@ export function App() {
     });
   }, []);
 
-  // Listen to hash changes (e.g. /#agents, /#.agents, /#database, /#db, /#sync=...)
+  useEffect(() => {
+    const initialUser = auth.getCurrentUser();
+    if (initialUser && initialUser.dbPath) {
+      setActiveDatabasePath(initialUser.dbPath);
+    }
+
+    return auth.subscribe((user) => {
+      setCurrentUser(user);
+      if (!user) {
+        setCurrentPage('landing');
+      }
+    });
+  }, []);
+
+  // Listen to hash changes (e.g. /#agents, /#.agents, /#database, /#db, /#landing, /#sync=...)
   useEffect(() => {
     const handleHash = () => {
       // 1. Check if URL contains sync payload from another device / QR code
@@ -41,20 +60,37 @@ export function App() {
       const hash = window.location.hash.toLowerCase().replace('#', '').replace('/', '');
       if (hash === 'agents' || hash === '.agents' || hash === 'database' || hash === 'db') {
         setCurrentPage('agents');
+      } else if (hash === 'landing' || hash === 'welcome' || hash === 'signup' || hash === 'login') {
+        setCurrentPage('landing');
       }
     };
 
     handleHash();
     window.addEventListener('hashchange', handleHash);
-
-    // If completely new device (like opening on a phone for the first time), auto-pull from site database
-    const hasLocal = localStorage.getItem('simpledo_data_v4');
-    if (!hasLocal) {
-      storage.pullFromSite();
-    }
-
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
+
+  const handleSignOut = () => {
+    auth.signOut();
+    setCurrentUser(null);
+    setCurrentPage('landing');
+  };
+
+  // Show Landing Page if user is not signed in or explicitly navigated to 'landing'
+  if (!currentUser || currentPage === 'landing') {
+    return (
+      <LandingPage
+        currentUser={currentUser}
+        onAuthenticated={(user) => {
+          setCurrentUser(user);
+          setCurrentPage('today');
+          setSyncNotice(`Signed in as @${user.username} — Cloud database connected`);
+          setTimeout(() => setSyncNotice(null), 4000);
+        }}
+        onEnterWorkspace={() => setCurrentPage('today')}
+      />
+    );
+  }
 
   const todayStr = getTodayStr();
   const dayPlan = (data.dayPlans && data.dayPlans[todayStr]) || {
@@ -111,6 +147,8 @@ export function App() {
         pendingTasksCount={pendingTasksCount}
         inboxTasksCount={inboxTasksCount}
         habitsTodayDone={habitsTodayDone}
+        currentUser={currentUser}
+        onSignOut={handleSignOut}
       />
 
       {/* Main Content Area */}
@@ -150,12 +188,20 @@ export function App() {
       {/* Footer */}
       <footer className="border-t border-[#ebebeb] bg-[#fafafa] py-6 mt-auto">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-neutral-400">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-center">
             <span className="font-semibold text-neutral-700 lowercase">simple do</span>
             <span>•</span>
-            <span>Persistent Habits & Tasks</span>
+            <span className="font-mono text-[11px] text-neutral-500">
+              DB: /{currentUser.dbPath}.json
+            </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap justify-center">
+            <button
+              onClick={() => setCurrentPage('landing')}
+              className="hover:text-neutral-900 transition-colors"
+            >
+              Overview
+            </button>
             <button
               onClick={() => setCurrentPage('today')}
               className={`hover:text-neutral-900 transition-colors ${
@@ -194,8 +240,16 @@ export function App() {
             </button>
             <span className="text-neutral-300">|</span>
             <button
+              onClick={handleSignOut}
+              className="hover:text-neutral-900 transition-colors"
+              title="Sign out of current account"
+            >
+              Sign Out
+            </button>
+            <span className="text-neutral-300">|</span>
+            <button
               onClick={() => {
-                if (confirm('Are you sure you want to reset and clear all data?')) {
+                if (confirm('Are you sure you want to reset and clear all data in your current workspace?')) {
                   storage.resetAll();
                 }
               }}

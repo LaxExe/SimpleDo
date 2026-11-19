@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getDatabase, ref, onValue, set, off } from 'firebase/database';
-import { SimpleDoData, DayPlan } from '../types';
+import { getDatabase, ref, onValue, set, get, off } from 'firebase/database';
+import { SimpleDoData, DayPlan, UserProfile } from '../types';
 
 export const firebaseConfig = {
   apiKey: "AIzaSyDMptOnosS2HA35NDLrH9lWZpFyQDHTlfw",
@@ -21,6 +21,38 @@ export type SyncStatus = 'connecting' | 'connected' | 'permission_denied' | 'err
 let syncStatus: SyncStatus = 'connecting';
 let statusListeners: ((status: SyncStatus) => void)[] = [];
 let isApplyingRemoteChange = false;
+
+// Dynamic database path per authenticated user
+const ACTIVE_USER_STORAGE_KEY = 'simpledo_active_user_v1';
+
+function getInitialDbPath(): string {
+  if (typeof window === 'undefined') return 'simpledo_data';
+  try {
+    const raw = localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
+    if (raw) {
+      const parsed: UserProfile = JSON.parse(raw);
+      if (parsed && parsed.dbPath) {
+        return parsed.dbPath;
+      }
+    }
+  } catch {
+    // fallback
+  }
+  return 'simpledo_data';
+}
+
+let activeDbPath: string = getInitialDbPath();
+let currentUnsubscribe: (() => void) | null = null;
+let savedOnRemoteData: ((data: SimpleDoData) => void) | null = null;
+let savedGetLocalData: (() => SimpleDoData) | null = null;
+
+export function getActiveDatabasePath(): string {
+  return activeDbPath;
+}
+
+export function getActiveDatabaseRestUrl(): string {
+  return `${firebaseConfig.databaseURL}/${activeDbPath}.json`;
+}
 
 export function getFirebaseSyncStatus(): SyncStatus {
   return syncStatus;
@@ -51,7 +83,15 @@ export function normalizeFirebaseData(val: any): SimpleDoData {
     return {
       tasks: [],
       events: [],
-      inboxes: [],
+      inboxes: [
+        {
+          id: 'inbox-general',
+          name: 'General',
+          description: 'Quick catch-all',
+          color: '#171717',
+          createdAt: new Date().toISOString(),
+        },
+      ],
       habits: [],
       dayPlans: {},
     };
@@ -115,14 +155,16 @@ export function normalizeFirebaseData(val: any): SimpleDoData {
 }
 
 /**
- * Syncs local data to Firebase Realtime Database
+ * Syncs local data to the active user's Firebase Realtime Database path
  */
-export async function pushToFirebase(data: SimpleDoData): Promise<boolean> {
-  if (isApplyingRemoteChange) return true;
+export async function pushToFirebase(data: SimpleDoData, customPath?: string): Promise<boolean> {
+  if (isApplyingRemoteChange && !customPath) return true;
+
+  const targetPath = customPath || activeDbPath;
+  if (!targetPath) return false;
 
   try {
-    const dataRef = ref(rtdb, 'simpledo_data');
-    // Deep clone and clean all undefined values to avoid Firebase validation errors
+    const dataRef = ref(rtdb, targetPath);
     const cleanData = JSON.parse(JSON.stringify(data));
     await set(dataRef, cleanData);
     setSyncStatus('connected');
@@ -140,13 +182,39 @@ export async function pushToFirebase(data: SimpleDoData): Promise<boolean> {
 }
 
 /**
+ * Switches the active Firebase Realtime Database path (e.g. when a user logs in or switches accounts)
+ */
+export function setActiveDatabasePath(newPath: string) {
+  if (activeDbPath === newPath && currentUnsubscribe) {
+    return;
+  }
+  activeDbPath = newPath;
+  if (currentUnsubscribe) {
+    currentUnsubscribe();
+    currentUnsubscribe = null;
+  }
+  if (savedOnRemoteData && savedGetLocalData) {
+    initFirebaseSync(savedOnRemoteData, savedGetLocalData);
+  }
+}
+
+/**
  * Initializes two-way real-time listener between Firebase RTDB and local storage
  */
 export function initFirebaseSync(
   onRemoteData: (data: SimpleDoData) => void,
   getLocalData: () => SimpleDoData
 ) {
-  const dataRef = ref(rtdb, 'simpledo_data');
+  savedOnRemoteData = onRemoteData;
+  savedGetLocalData = getLocalData;
+
+  if (currentUnsubscribe) {
+    currentUnsubscribe();
+    currentUnsubscribe = null;
+  }
+
+  const targetPath = activeDbPath || 'simpledo_data';
+  const dataRef = ref(rtdb, targetPath);
 
   onValue(
     dataRef,
@@ -163,10 +231,10 @@ export function initFirebaseSync(
           isApplyingRemoteChange = false;
         }
       } else if (!val) {
-        // Database is empty in Firebase: seed it from local device if local device has data
+        // Database node is empty in Firebase: seed it from local device if local device has data
         const localData = getLocalData();
-        if (localData && (localData.tasks.length > 0 || (localData.events && localData.events.length > 0))) {
-          pushToFirebase(localData);
+        if (localData && (localData.tasks.length > 0 || (localData.events && localData.events.length > 0) || localData.habits.length > 0)) {
+          pushToFirebase(localData, targetPath);
         }
       }
     },
@@ -180,7 +248,27 @@ export function initFirebaseSync(
     }
   );
 
-  return () => {
+  currentUnsubscribe = () => {
     off(dataRef);
   };
+
+  return currentUnsubscribe;
+}
+
+/**
+ * Fetches data once from a specific database path in Firebase RTDB
+ */
+export async function fetchDatabaseNode(path: string): Promise<any> {
+  const nodeRef = ref(rtdb, path);
+  const snapshot = await get(nodeRef);
+  return snapshot.exists() ? snapshot.val() : null;
+}
+
+/**
+ * Writes data once to a specific database path in Firebase RTDB
+ */
+export async function writeDatabaseNode(path: string, payload: any): Promise<void> {
+  const nodeRef = ref(rtdb, path);
+  const cleanPayload = JSON.parse(JSON.stringify(payload));
+  await set(nodeRef, cleanPayload);
 }

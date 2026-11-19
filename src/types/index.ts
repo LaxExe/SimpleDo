@@ -1,4 +1,16 @@
-export type Page = 'today' | 'tasks' | 'inbox' | 'tracker' | 'agents';
+export type Page = 'landing' | 'today' | 'tasks' | 'inbox' | 'tracker' | 'agents';
+
+export type StarterTemplate = 'starter' | 'student' | 'blank' | 'import_legacy';
+
+export interface UserProfile {
+  id: string;           // Normalized DB key (e.g. 'alex')
+  username: string;     // Login handle
+  email: string;        // User email
+  displayName: string;  // Full display name
+  dbPath: string;       // Firebase RTDB path (e.g. 'users/alex/data' or 'simpledo_data')
+  createdAt: string;
+  lastLoginAt: string;
+}
 
 export type Priority = 'low' | 'medium' | 'high';
 

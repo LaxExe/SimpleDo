@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Page, SimpleDoData } from '../types';
 import { storage } from '../services/storage';
+import { getActiveDatabaseRestUrl, getActiveDatabasePath } from '../services/firebase';
 
 interface AgentsPageProps {
   onNavigate: (page: Page) => void;
@@ -568,26 +569,26 @@ console.log({ activeTodayTasks, activeTodayEvents });
                 </h3>
               </div>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
-                Live 50ms Sync to Phone
+                Active DB Path: /{getActiveDatabasePath()}.json
               </span>
             </div>
 
             <p className="text-xs text-neutral-600 leading-relaxed">
-              Your autonomous agent can directly inspect and edit SimpleDo over HTTP. Any update to this URL immediately syncs live to your phone and laptop screens within 50 milliseconds.
+              Your autonomous agent can directly inspect and edit your active SimpleDo cloud workspace over HTTP. Any update to this URL immediately syncs live to your phone and laptop screens within 50 milliseconds.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono">
               <div className="p-2.5 bg-[#fafafa] rounded-lg border border-[#ebebeb] space-y-1">
-                <span className="text-neutral-400 block text-[10px] uppercase font-semibold">GET (Read All Data):</span>
+                <span className="text-neutral-400 block text-[10px] uppercase font-semibold">GET (Read Your Workspace):</span>
                 <code className="text-neutral-900 select-all block overflow-x-auto text-[11px]">
-                  curl -s "https://simple-do-c5438-default-rtdb.firebaseio.com/simpledo_data.json"
+                  curl -s "{getActiveDatabaseRestUrl()}"
                 </code>
               </div>
 
               <div className="p-2.5 bg-[#fafafa] rounded-lg border border-[#ebebeb] space-y-1">
-                <span className="text-neutral-400 block text-[10px] uppercase font-semibold">PUT (Write / Replace Data):</span>
+                <span className="text-neutral-400 block text-[10px] uppercase font-semibold">PUT (Write / Replace Workspace):</span>
                 <code className="text-neutral-900 select-all block overflow-x-auto text-[11px]">
-                  curl -X PUT "https://simple-do-c5438-default-rtdb.firebaseio.com/simpledo_data.json" -H "Content-Type: application/json" -d @data.json
+                  curl -X PUT "{getActiveDatabaseRestUrl()}" -H "Content-Type: application/json" -d @data.json
                 </code>
               </div>
             </div>

@@ -1,8 +1,25 @@
 import { SimpleDoData, Task, InboxGroup, Habit, DayPlan, InboxEvent } from '../types';
 import { pushToFirebase, initFirebaseSync } from './firebase';
 
-const STORAGE_KEY = 'simpledo_data_v4';
+const DEFAULT_STORAGE_KEY = 'simpledo_data_v4';
+const ACTIVE_USER_KEY = 'simpledo_active_user_v1';
 const EVENT_NAME = 'simpledo:change';
+
+export function getStorageKey(): string {
+  if (typeof window === 'undefined') return DEFAULT_STORAGE_KEY;
+  try {
+    const rawUser = localStorage.getItem(ACTIVE_USER_KEY);
+    if (rawUser) {
+      const user = JSON.parse(rawUser);
+      if (user && user.id && user.dbPath !== 'simpledo_data') {
+        return `${DEFAULT_STORAGE_KEY}_${user.id}`;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return DEFAULT_STORAGE_KEY;
+}
 
 export function getTodayStr(): string {
   const now = new Date();
@@ -133,10 +150,12 @@ export function calculateCustomHabitStreak(
 export const storage = {
   load(): SimpleDoData {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const key = getStorageKey();
+      const raw = localStorage.getItem(key);
       if (!raw) {
-        this.save(defaultData);
-        return defaultData;
+        const freshCopy = JSON.parse(JSON.stringify(defaultData));
+        localStorage.setItem(key, JSON.stringify(freshCopy));
+        return freshCopy;
       }
       const parsed = JSON.parse(raw);
       if (!parsed.inboxes || parsed.inboxes.length === 0) {
@@ -176,7 +195,7 @@ export const storage = {
       }
       return parsed;
     } catch {
-      return defaultData;
+      return JSON.parse(JSON.stringify(defaultData));
     }
   },
 
@@ -184,7 +203,7 @@ export const storage = {
     try {
       // Deep clone & sanitize: strip all undefined values before saving to localStorage and Firebase
       const cleanData: SimpleDoData = JSON.parse(JSON.stringify(data));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanData));
+      localStorage.setItem(getStorageKey(), JSON.stringify(cleanData));
       window.dispatchEvent(new Event(EVENT_NAME));
       if (!skipFirebase) {
         pushToFirebase(cleanData).catch((err) => {
@@ -786,6 +805,7 @@ export const storage = {
 
 // Initialize real-time two-way synchronization with Firebase Realtime Database
 if (typeof window !== 'undefined') {
+  (window as any).storage = storage;
   initFirebaseSync(
     (remoteData) => {
       // Remote change received from phone/laptop: apply to local storage without re-pushing
