@@ -9,7 +9,7 @@ import { TrackerPage } from './pages/TrackerPage';
 import { AgentsPage } from './pages/AgentsPage';
 import { storage, getTodayStr } from './services/storage';
 import { auth } from './services/auth';
-import { subscribeToFirebaseStatus, SyncStatus, setActiveDatabasePath } from './services/firebase';
+import { subscribeToFirebaseStatus, SyncStatus } from './services/firebase';
 import { CheckCircle2, AlertTriangle, ExternalLink } from 'lucide-react';
 
 export function App() {
@@ -30,13 +30,15 @@ export function App() {
   useEffect(() => {
     const initialUser = auth.getCurrentUser();
     if (initialUser && initialUser.dbPath) {
-      setActiveDatabasePath(initialUser.dbPath);
+      auth.activateSession(initialUser);
     }
 
     return auth.subscribe((user) => {
       setCurrentUser(user);
       if (!user) {
         setCurrentPage('landing');
+      } else {
+        setCurrentPage((prev) => (prev === 'landing' ? 'today' : prev));
       }
     });
   }, []);
@@ -61,7 +63,12 @@ export function App() {
       if (hash === 'agents' || hash === '.agents' || hash === 'database' || hash === 'db') {
         setCurrentPage('agents');
       } else if (hash === 'landing' || hash === 'welcome' || hash === 'signup' || hash === 'login') {
-        setCurrentPage('landing');
+        if (auth.getCurrentUser()) {
+          setCurrentPage('today');
+          window.history.replaceState(null, '', window.location.pathname);
+        } else {
+          setCurrentPage('landing');
+        }
       }
     };
 
@@ -76,8 +83,8 @@ export function App() {
     setCurrentPage('landing');
   };
 
-  // Show Landing Page if user is not signed in or explicitly navigated to 'landing'
-  if (!currentUser || currentPage === 'landing') {
+  // Show Landing Page only if user is not signed in
+  if (!currentUser) {
     return (
       <LandingPage
         currentUser={currentUser}
@@ -104,7 +111,7 @@ export function App() {
   const todayTasksCount = (data.tasks || []).filter(
     (t) =>
       !t.completed &&
-      (plannedTaskIds.includes(t.id) || t.scheduledDate === todayStr)
+      (plannedTaskIds.includes(t.id) || t.scheduledDate === todayStr || t.dueDate === todayStr)
   ).length;
 
   const pendingTasksCount = (data.tasks || []).filter((t) => !t.completed).length;
@@ -196,12 +203,6 @@ export function App() {
             </span>
           </div>
           <div className="flex items-center gap-4 flex-wrap justify-center">
-            <button
-              onClick={() => setCurrentPage('landing')}
-              className="hover:text-neutral-900 transition-colors"
-            >
-              Overview
-            </button>
             <button
               onClick={() => setCurrentPage('today')}
               className={`hover:text-neutral-900 transition-colors ${

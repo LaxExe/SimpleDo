@@ -8,7 +8,16 @@ const EVENT_NAME = 'simpledo:change';
 export function getStorageKey(): string {
   if (typeof window === 'undefined') return DEFAULT_STORAGE_KEY;
   try {
-    const rawUser = localStorage.getItem(ACTIVE_USER_KEY);
+    let rawUser = localStorage.getItem(ACTIVE_USER_KEY);
+    if (!rawUser && typeof document !== 'undefined' && document.cookie) {
+      const match = document.cookie
+        .split('; ')
+        .find((row) => row.startsWith(`${ACTIVE_USER_KEY}=`));
+      if (match) {
+        rawUser = decodeURIComponent(match.substring(ACTIVE_USER_KEY.length + 1));
+        localStorage.setItem(ACTIVE_USER_KEY, rawUser);
+      }
+    }
     if (rawUser) {
       const user = JSON.parse(rawUser);
       if (user && user.id && user.dbPath !== 'simpledo_data') {
@@ -549,12 +558,15 @@ export const storage = {
       }
     });
 
-    // Remove scheduledDate from task while keeping dueDate deadline intact
+    // Remove scheduledDate (and dueDate if it was only appearing via dueDate on this date) from task
     data.tasks = data.tasks.map((t) => {
       if (t.id === taskId) {
         const updated = { ...t };
-        if (updated.scheduledDate === date) {
+        const hadScheduled = updated.scheduledDate === date;
+        if (hadScheduled) {
           delete updated.scheduledDate;
+        } else if (updated.dueDate === date) {
+          delete updated.dueDate;
         }
         return updated;
       }

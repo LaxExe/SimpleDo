@@ -1,6 +1,6 @@
 import React from 'react';
 import { Page, UserProfile } from '../types';
-import { CheckSquare, Activity, Sun, LogOut, Globe } from 'lucide-react';
+import { CheckSquare, Activity, Sun, LogOut } from 'lucide-react';
 
 interface NavigationProps {
   currentPage: Page;
@@ -97,17 +97,8 @@ export const Navigation: React.FC<NavigationProps> = ({
             })}
           </nav>
 
-          {/* Account & Overview Controls */}
+          {/* Account Controls */}
           <div className="flex items-center gap-2 text-xs">
-            <button
-              onClick={() => onNavigate('landing')}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-neutral-600 hover:text-neutral-900 bg-white border border-[#ebebeb] shadow-2xs transition-all active:scale-95"
-              title="Platform Overview & Landing Page"
-            >
-              <Globe className="w-3.5 h-3.5 text-neutral-500" />
-              <span className="hidden md:inline">Overview</span>
-            </button>
-
             {currentUser && (
               <div className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-0.5 rounded-full bg-white border border-[#ebebeb] shadow-2xs">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" title="Synced with Cloud DB" />

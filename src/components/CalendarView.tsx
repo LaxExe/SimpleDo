@@ -21,6 +21,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   tasks,
   events = [],
   inboxes = [],
+  habits,
   dayPlans,
   onDropTaskOnDate,
   onDropHabitOnDate,
@@ -57,7 +58,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     onSelectDate(todayStr);
   };
 
-  // Group tasks by date (both scheduled and due date)
+  // Group tasks by date (scheduledDate, dueDate, and dayPlans.plannedTaskIds)
   const tasksByDate: Record<string, Task[]> = {};
   tasks.forEach((task) => {
     const dates = new Set<string>();
@@ -73,6 +74,25 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       }
     });
   });
+
+  if (dayPlans && typeof dayPlans === 'object') {
+    Object.entries(dayPlans).forEach(([dateKey, plan]) => {
+      const plannedIds = plan?.plannedTaskIds;
+      if (Array.isArray(plannedIds)) {
+        plannedIds.forEach((tId) => {
+          const task = tasks.find((t) => t.id === tId);
+          if (task) {
+            if (!tasksByDate[dateKey]) {
+              tasksByDate[dateKey] = [];
+            }
+            if (!tasksByDate[dateKey].some((t) => t.id === task.id)) {
+              tasksByDate[dateKey].push(task);
+            }
+          }
+        });
+      }
+    });
+  }
 
   const cells = [];
   for (let i = 0; i < firstDayOfWeek; i++) {
@@ -151,14 +171,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           const isToday = cell.dateStr === todayStr;
           const isOver = dragOverDate === cell.dateStr;
 
-          // Filter completed tasks on calendar: only show if due date is set beyond today
+          // Filter completed tasks on calendar: completed items are removed from the calendar
           const allDateTasks = tasksByDate[cell.dateStr] || [];
-          const visibleDateTasks = allDateTasks.filter((task) => {
-            if (!task.completed) return true;
-            return Boolean(task.dueDate && task.dueDate > todayStr);
-          });
+          const visibleDateTasks = allDateTasks.filter((task) => !task.completed);
           const datePlan = dayPlans[cell.dateStr];
-          const plannedHabitsCount = datePlan?.plannedHabitIds?.length || 0;
+          const plannedHabitIds = Array.isArray(datePlan?.plannedHabitIds) ? datePlan.plannedHabitIds : [];
+          const pendingPlannedHabitsCount = plannedHabitIds.filter((hId) => {
+            const habit = habits.find((h) => h.id === hId);
+            if (!habit) return false;
+            return !(Array.isArray(habit.completedDates) && habit.completedDates.includes(cell.dateStr));
+          }).length;
 
           return (
             <div
@@ -207,14 +229,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 </span>
 
                 <div className="flex items-center gap-1">
-                  {/* Habit indicator if habits scheduled */}
-                  {plannedHabitsCount > 0 && (
+                  {/* Habit indicator if pending habits scheduled */}
+                  {pendingPlannedHabitsCount > 0 && (
                     <span
                       className="inline-flex items-center gap-0.5 text-[9px] sm:text-[10px] font-mono text-orange-600 bg-orange-50 px-1 sm:px-1.5 py-0.2 rounded"
-                      title={`${plannedHabitsCount} habits planned`}
+                      title={`${pendingPlannedHabitsCount} pending habits planned`}
                     >
                       <Flame className="w-2 sm:w-2.5 h-2 sm:h-2.5 fill-orange-500 text-orange-500" />
-                      <span>{plannedHabitsCount}</span>
+                      <span>{pendingPlannedHabitsCount}</span>
                     </span>
                   )}
                 </div>

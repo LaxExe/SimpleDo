@@ -38,6 +38,23 @@ function getInitialDbPath(): string {
   } catch {
     // fallback
   }
+  try {
+    if (typeof document !== 'undefined' && document.cookie) {
+      const match = document.cookie
+        .split('; ')
+        .find((row) => row.startsWith(`${ACTIVE_USER_STORAGE_KEY}=`));
+      if (match) {
+        const rawCookie = decodeURIComponent(match.substring(ACTIVE_USER_STORAGE_KEY.length + 1));
+        const parsed: UserProfile = JSON.parse(rawCookie);
+        if (parsed && parsed.dbPath) {
+          localStorage.setItem(ACTIVE_USER_STORAGE_KEY, rawCookie);
+          return parsed.dbPath;
+        }
+      }
+    }
+  } catch {
+    // fallback
+  }
   return 'simpledo_data';
 }
 

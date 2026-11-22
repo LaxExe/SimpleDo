@@ -59,21 +59,26 @@ export const TodayPage: React.FC<TodayPageProps> = ({
   const plannedTaskIds = Array.isArray(dayPlan?.plannedTaskIds) ? dayPlan.plannedTaskIds : [];
   const plannedHabitIds = Array.isArray(dayPlan?.plannedHabitIds) ? dayPlan.plannedHabitIds : [];
 
-  // Compute tasks for selected date (active only; completed tasks move to archive)
+  // Compute tasks for selected date (active only; includes tasks planned, scheduled, or due on selectedDate)
   const rawPlannedTasks = (tasks || []).filter(
     (t) =>
       !t.completed && (
         plannedTaskIds.includes(t.id) ||
-        t.scheduledDate === selectedDate
+        t.scheduledDate === selectedDate ||
+        t.dueDate === selectedDate
       )
   );
   const plannedTasks = sortTasks(rawPlannedTasks);
 
-  // Compute habits for selected date (only habits dragged into this day)
-  const plannedHabits = (habits || []).filter((h) => plannedHabitIds.includes(h.id));
+  // Compute habits for selected date (only active/uncompleted habits dragged into this day)
+  const plannedHabits = (habits || []).filter(
+    (h) =>
+      plannedHabitIds.includes(h.id) &&
+      !(Array.isArray(h.completedDates) && h.completedDates.includes(selectedDate))
+  );
 
-  // Compute events for selected date (sitting below tasks, not assignable to plan mode)
-  const selectedDateEvents = (events || []).filter((e) => e.date === selectedDate);
+  // Compute events for selected date (active only; completed events are removed from Today & Calendar)
+  const selectedDateEvents = (events || []).filter((e) => e.date === selectedDate && !e.completed);
 
   // Available tasks not yet planned on selected date (sorted active first)
   const availableTasks = sortTasks(
@@ -103,9 +108,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
   }
 
   // Available habits not yet in this day's plan
-  const availableHabits = habits.filter(
-    (h) => !plannedHabits.some((ph) => ph.id === h.id)
-  );
+  const availableHabits = habits.filter((h) => !plannedHabitIds.includes(h.id));
 
   const isToday = selectedDate === todayStr;
 
@@ -188,6 +191,15 @@ export const TodayPage: React.FC<TodayPageProps> = ({
               <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-neutral-900">
                 {isToday ? 'Today' : formattedDateShort}
               </h1>
+              {!isToday && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate(todayStr)}
+                  className="px-2.5 py-1 text-xs font-medium text-neutral-700 hover:text-neutral-900 bg-white hover:bg-neutral-100 rounded-full border border-[#ebebeb] transition-colors shadow-2xs"
+                >
+                  Back to Today
+                </button>
+              )}
             </div>
 
             {/* Right side stats */}
@@ -203,7 +215,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
         <div className="bg-white rounded-xl border border-[#ebebeb] shadow-subtle divide-y divide-[#ebebeb] overflow-hidden">
           {plannedTasks.length === 0 ? (
             <div className="p-8 text-center text-xs font-mono text-neutral-400">
-              No tasks scheduled for today.
+              {isToday ? 'No tasks scheduled for today.' : `No pending tasks for ${formattedDateShort}.`}
             </div>
           ) : (
             plannedTasks.map((task) => {
@@ -352,12 +364,12 @@ export const TodayPage: React.FC<TodayPageProps> = ({
           })
         )}
 
-          {/* Planned Habits Row for Today */}
+          {/* Planned Habits Row for Today / Selected Date */}
           {plannedHabits.length > 0 && (
             <div className="p-4 sm:p-5 bg-[#fafafa]/50 border-t border-[#ebebeb] space-y-2.5">
               <div className="text-xs font-semibold text-neutral-700 uppercase tracking-wider flex items-center gap-1.5">
                 <Flame className="w-3.5 h-3.5 text-neutral-900" />
-                <span>Habits for today</span>
+                <span>{isToday ? 'Habits for today' : `Habits for ${formattedDateShort}`}</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {plannedHabits.map((habit) => {
@@ -440,26 +452,36 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                         }}
                         className="p-3 rounded-lg border border-transparent flex items-start justify-between gap-2 shadow-2xs text-white"
                       >
-                        <div className="min-w-0 space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full flex-shrink-0 bg-white" />
-                            <span className="text-xs font-semibold text-white truncate">
-                              {evt.title}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 text-[11px] text-white/90 font-mono">
-                            {evt.time && (
-                              <span className="flex items-center gap-1 text-white font-medium">
-                                <Clock className="w-3 h-3 text-white/80" />
-                                <span>{evt.time}</span>
+                        <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                          <button
+                            type="button"
+                            onClick={() => storage.toggleEvent(evt.id)}
+                            className="flex-shrink-0 mt-0.5 transition-transform active:scale-95"
+                            title="Mark event as done"
+                          >
+                            <div className="w-4 h-4 rounded-full border-2 border-white/80 hover:border-white transition-colors" />
+                          </button>
+
+                          <div className="min-w-0 space-y-1 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-white truncate">
+                                {evt.title}
                               </span>
-                            )}
-                            {evt.location && (
-                              <span className="flex items-center gap-1 text-white/90 truncate">
-                                <MapPin className="w-3 h-3 text-white/80 flex-shrink-0" />
-                                <span className="truncate">{evt.location}</span>
-                              </span>
-                            )}
+                            </div>
+                            <div className="flex items-center gap-3 text-[11px] text-white/90 font-mono">
+                              {evt.time && (
+                                <span className="flex items-center gap-1 text-white font-medium">
+                                  <Clock className="w-3 h-3 text-white/80" />
+                                  <span>{evt.time}</span>
+                                </span>
+                              )}
+                              {evt.location && (
+                                <span className="flex items-center gap-1 text-white/90 truncate">
+                                  <MapPin className="w-3 h-3 text-white/80 flex-shrink-0" />
+                                  <span className="truncate">{evt.location}</span>
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>

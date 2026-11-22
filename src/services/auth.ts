@@ -8,7 +8,64 @@ import {
 import { storage, getTodayStr } from './storage';
 
 const ACTIVE_USER_KEY = 'simpledo_active_user_v1';
+const AUTH_COOKIE_NAME = 'simpledo_active_user_v1';
 const AUTH_EVENT_NAME = 'simpledo:auth_change';
+
+function setPersistentAuthStorage(profile: UserProfile) {
+  if (typeof window === 'undefined') return;
+  const serialized = JSON.stringify(profile);
+  try {
+    localStorage.setItem(ACTIVE_USER_KEY, serialized);
+  } catch {
+    // ignore storage quota errors
+  }
+  try {
+    const encoded = encodeURIComponent(serialized);
+    // 10-year max-age cookie so session persists across restarts/PWA contexts until explicit sign-out
+    document.cookie = `${AUTH_COOKIE_NAME}=${encoded}; path=/; max-age=315360000; SameSite=Lax`;
+  } catch {
+    // ignore cookie errors
+  }
+  try {
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().catch(() => {});
+    }
+  } catch {
+    // ignore
+  }
+}
+
+function clearPersistentAuthStorage() {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(ACTIVE_USER_KEY);
+  } catch {
+    // ignore
+  }
+  try {
+    document.cookie = `${AUTH_COOKIE_NAME}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+  } catch {
+    // ignore
+  }
+}
+
+function readAuthCookie(): UserProfile | null {
+  if (typeof document === 'undefined' || !document.cookie) return null;
+  try {
+    const match = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith(`${AUTH_COOKIE_NAME}=`));
+    if (!match) return null;
+    const rawValue = decodeURIComponent(match.substring(AUTH_COOKIE_NAME.length + 1));
+    const parsed: UserProfile = JSON.parse(rawValue);
+    if (parsed && parsed.id && parsed.dbPath) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Normalizes a username or email prefix into a safe Firebase Realtime Database key
@@ -343,28 +400,39 @@ export async function buildStarterWorkspace(
 
 export const auth = {
   /**
-   * Returns the currently authenticated user profile from localStorage, or null if signed out
+   * Returns the currently authenticated user profile from localStorage (with persistent cookie backup), or null if signed out
    */
   getCurrentUser(): UserProfile | null {
     if (typeof window === 'undefined') return null;
     try {
       const raw = localStorage.getItem(ACTIVE_USER_KEY);
-      if (!raw) return null;
-      const parsed: UserProfile = JSON.parse(raw);
-      if (parsed && parsed.id && parsed.dbPath) {
-        return parsed;
+      if (raw) {
+        const parsed: UserProfile = JSON.parse(raw);
+        if (parsed && parsed.id && parsed.dbPath) {
+          return parsed;
+        }
       }
-      return null;
     } catch {
-      return null;
+      // fallback to cookie below
     }
+
+    const cookieUser = readAuthCookie();
+    if (cookieUser) {
+      try {
+        localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(cookieUser));
+      } catch {
+        // ignore
+      }
+      return cookieUser;
+    }
+    return null;
   },
 
   /**
    * Internal helper to activate a user session locally and point Firebase RTDB to their path
    */
   activateSession(profile: UserProfile, initialData?: SimpleDoData, skipFirebasePush = true) {
-    localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(profile));
+    setPersistentAuthStorage(profile);
     if (initialData) {
       storage.save(initialData, skipFirebasePush);
     }
@@ -564,7 +632,7 @@ export const auth = {
    * Signs out of the current session and returns to the Landing Page
    */
   signOut() {
-    localStorage.removeItem(ACTIVE_USER_KEY);
+    clearPersistentAuthStorage();
     window.dispatchEvent(new Event(AUTH_EVENT_NAME));
   },
 
